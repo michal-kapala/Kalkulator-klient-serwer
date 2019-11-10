@@ -29,15 +29,17 @@ void dispatchMessage(const Uint64 &msg, header &header)//wczytuje dane z wiadomo
 
 void sendPacket(TcpSocket &client)
 {
-	std::string end;
+	int op_code; //zmienna przechowująca kod operacji
 	std::cout << "\nPodaj numer operacji:\n0 - dodawanie\n1 - odejmowanie\n2 - mnozenie\n3 - dzielenie\n4 - >=\n5 - <=\n6 - potega (podstawa, wykladnik)\n7 - pierwiastek (liczba pierwiastkowana, stopien)\n8 - silnia\npozostale - wyjscie z programu\nOperacja: ";
-	std::cin >> end;
-	if (end.size() == 1 && (int)end[0] > 47 && (int)end[0] < 57)
+	std::cin >> op_code;
+
+	if (op_code >=0 && op_code <=8) //sprawdzanie czy w zakresie
 	{
 		header nag;
-		nag.operationID = atoi(end.c_str());
+		nag.operationID = op_code;
 		nag.statusID = 0;//do ustawienia przez serwer
 		nag.sessionID = 0;//do ustawienia przez serwer
+
 		if (nag.operationID == 8)
 		{
 			nag.secparam = 0;
@@ -45,7 +47,7 @@ void sendPacket(TcpSocket &client)
 			Uint64 arg1;
 			std::cout << "Podaj argument: ";
 			std::cin >> arg1;
-			Uint64 message = createMessage(nag);//3 bity - operacja, 4 bity - status, 32 bity dlugosc danych w bitach, 1 bit - flaga argumentow (0 - 1 arg., 1 - 2 arg.), 16 bitow - identyfikator sesji, 8 bitow dopelnienia
+			Uint64 message = createMessage(nag); //3 bity - operacja, 4 bity - status, 32 bity dlugosc danych w bitach, 1 bit - flaga argumentow (0 - 1 arg., 1 - 2 arg.), 16 bitow - identyfikator sesji, 8 bitow dopelnienia
 			Uint64 pack[2] = { message, arg1 };
 			std::cout << "\nDane wysylanego pakietu\nWartosc wiadomosci wyslanej to: " << message << " (64-bit)" << std::endl;
 			dispatchMessage(message, nag);
@@ -59,7 +61,7 @@ void sendPacket(TcpSocket &client)
 			Uint64 arg1, arg2;
 			std::cout << "\nPodaj 2 argumenty:\nArgument 1: ";
 			std::cin >> arg1;
-			std::cout << "Argument 2: ";
+			std::cout << "\nArgument 2: ";
 			std::cin >> arg2;
 			Uint64 message = createMessage(nag);//3 bity - operacja, 4 bity - status, 32 bity dlugosc danych w bitach, 1 bit - flaga argumentow (0 - 1 arg., 1 - 2 arg.), 16 bitow - identyfikator sesji, 8 bitow dopelnienia
 			Uint64 pack[3] = { message, arg1, arg2 };

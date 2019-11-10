@@ -1,4 +1,3 @@
 ﻿  pch.cpp
   Klient TCP.cpp
-c:\users\michal\source\repos\klient tcp\klient tcp\klient tcp.cpp(9): warning C4101: "message": lokalna zmienna, do której nie istnieje odwołanie
-  Klient TCP.vcxproj -> C:\Users\Michal\source\repos\Klient TCP\Debug\Klient TCP.exe
+  Klient TCP.vcxproj -> C:\Users\jakub\Source\Repos\michal-kapala\Kalkulator-klient-serwer\Klient TCP\Debug\Klient TCP.exe

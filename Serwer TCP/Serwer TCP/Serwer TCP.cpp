@@ -1,69 +1,22 @@
 ﻿#include "pch.h"
 #include "header masks.hpp"
+#include "server response.hpp"
 #include <iostream>
 #include <windows.h>
-#include <math.h>
+#include <vector>
 #include <SFML/Network.hpp>//linkowanie dynamiczne plikow .dll
 using namespace sf;
-
-void floatTo2Int(float src, Uint64& dest1, Uint64& dest2) {
-	dest1 = src;
-	src -= dest1;
-	src *= 1000;
-	dest2 = src;
-}
-
-float root(Uint64 arg1, Uint64 arg2) {
-	float index = 1.0 / (float)arg2;
-	float ret = pow(arg1, index);
-	std::cout << "Operacja pierwiastkowania: (" << arg2 << ")th root of " << arg1 << " = " << ret << "\n";
-	return ret;
-}
-
-Uint64 power(Uint64 arg1, Uint64 arg2) {
-	Uint64 ret = pow(arg1, arg2);
-	std::cout << "Operacja potegoawnia: " << arg1 << "^" << arg2 << " = " << ret << "\n";
-	return ret;
-}
-
-Uint64 lesserEqual(Uint64 arg1, Uint64 arg2) {
-	Uint64 ret;
-	if (arg1 <= arg2) ret = 1;
-	else ret = 0;
-	std::cout << "Operacja <=: " << arg1 << "<=" << arg2 << "Odpowiedz: " << ret << "\n";
-	return ret;
-}
-
-Uint64 greaterEqual(Uint64 arg1, Uint64 arg2) {
-	Uint64 ret;
-	if (arg1 >= arg2) ret = 1;
-	else ret = 0;
-	std::cout << "Operacja >=: " << arg1 << ">=" << arg2 << "Odpowiedz: " << ret << "\n";
-	return ret;
-}
-
-Uint64 add(Uint64 arg1, Uint64 arg2) {
-	Uint64 ret = arg1 + arg2;
-	std::cout << "Operacja dodawania: " << arg1 << " + " << arg2 << " = "<< ret << "\n";
-	return ret;
-}
-
-Int64 subtract(Uint64 arg1, Uint64 arg2) {
-	Uint64 ret = arg1 - arg2;
-	std::cout << "Operacja dodawania: " << arg1 << " - " << arg2 << " = " << ret << "\n";
-	return ret;
-}
-
-Uint64 multiply(Uint64 arg1, Uint64 arg2) {
-	Uint64 ret = arg1 * arg2;
-	std::cout << "Operacja dodawania: " << arg1 << " * " << arg2 << " = " << ret << "\n";
-	return ret;
-}
-
-float divide(Uint64 arg1, Uint64 arg2) {
-	float ret = arg1 / arg2;
-	std::cout << "Operacja dodawania: " << arg1 << " / " << arg2 << " = " << ret << "\n";
-	return ret;
+const long long max = 9223372036854775807;
+const long long min = max * -1 - 1;
+Uint64 createMessage(const header &header)//wczytuje dane z obiektu do wiadomosci
+{
+	unsigned long long message = 0;
+	message += (header.operationID << 61);
+	message += (header.statusID << 57);
+	message += (header.datalength << 25);
+	message += (header.secparam << 24);
+	message += (header.sessionID << 8);
+	return message;
 }
 
 void dispatchMessage(const Uint64 &msg, header &header)//wczytuje dane z wiadomosci do obiektu
@@ -75,90 +28,242 @@ void dispatchMessage(const Uint64 &msg, header &header)//wczytuje dane z wiadomo
 	header.sessionID = (msg & SESSIONID_MASK) >> 8;
 }
 
-void serverProcess(const Uint64 messg[])
+void serverProcess(Int64 messg[])
 {
-	Uint64 msg;
-	msg = messg[0];
 	header header;
-	dispatchMessage(msg, header);
+	dispatchMessage(messg[0], header);
+	std::cout << "\nOdebrano zapytanie\nStatus: " << header.statusID << "\nDlugosc danych: " << header.datalength << "\nArgumentow: " << header.secparam + 1 << "\nID sesji: " << header.sessionID << std::endl;
 	if (!header.secparam)
 	{
-		Uint64 arg1 = messg[1];
-		std::cout << "Otrzymano wiadomosc: " << msg << " oraz argument " << arg1 << std::endl;
-		std::cout << "ID operacji: " << header.operationID << " (silnia)";
+		Int64 arg1 = messg[1];
+		std::cout << "Otrzymano wiadomosc: " << messg[0] << " oraz argument " << arg1 << std::endl;
+		std::cout << "ID operacji: " << header.operationID << " (silnia)\n";
+		if (arg1 < 0)
+			header.statusID = INVALIDARG;//silnia z liczby ujemnej
+		else if (arg1 > 20)
+			header.statusID = OVERFLOW;//21! wykracza poza zakres 64 bitow
+		else
+		{
+			header.statusID = FACTORIALOK;
+			messg[1] = factorial(arg1);//pozostawia argument w przypadku niepowodzenia
+			std::cout << "!" << arg1 << " = " << messg[1] << std::endl;
+		}
 	}
 	else
 	{
-		Uint64 arg1 = messg[1], arg2 = messg[2];
-		std::cout << "Otrzymano wiadomosc: " << msg << " oraz argumenty: " << arg1 << " i " << arg2 << std::endl;
-		std::cout << "ID operacji: " << header.operationID << " (dodawanie)";
+		Int64 arg1 = messg[1], arg2 = messg[2];
+		std::cout << "Otrzymano wiadomosc: " << messg[0] << " oraz argumenty: " << arg1 << " i " << arg2 << std::endl;
+		std::cout << "ID operacji: " << header.operationID << " - ";
+		switch (header.operationID)
+		{
+		case DODAWANIE:
+			std::cout << "dodawanie\n";
+			if (arg1 > 0 && arg2 > 0 && add(arg1, arg2) < 0)//2 argumenty zwrotne
+			{
+				header.statusID = OVERFLOW;
+				std::cout << arg1 << " + " << arg2 << " = " << add(arg1, arg2) << " - przekroczono zakres\n";
+			}
+			else if (arg1 < 0 && arg2 < 0 && add(arg1, arg2) > 0)
+			{
+				header.statusID = UNDERFLOW;
+				std::cout << arg1 << " + " << arg2 << " = " << add(arg1, arg2) << " - przekroczono zakres\n";
+			}
+			else
+			{
+				std::cout << arg1 << " + " << arg2 << " = " << add(arg1, arg2) << std::endl;
+				header.statusID = OK;
+				header.secparam = 0;//1 argument zwrotny - wynik
+				header.datalength -= 8;// 1 argument mniej, czyli 8 bajtow mniej
+				messg[1] = add(arg1, arg2);
+			}
+			break;
+		case ODEJMOWANIE:
+			std::cout << "odejmowanie\n";
+			if (arg1 > 0 && arg2 < 0 && subtract(arg1, arg2) < 0)//2 argumenty zwrotne
+			{
+				header.statusID = OVERFLOW;
+				std::cout << arg1 << " - " << arg2 << " = " << subtract(arg1, arg2) << " - przekroczono zakres\n";
+			}
+			else if (arg1 < 0 && arg2 > 0 && add(arg1, arg2) > 0)
+			{
+				header.statusID = UNDERFLOW;
+				std::cout << arg1 << " - " << arg2 << " = " << subtract(arg1, arg2) << " - przekroczono zakres\n";
+			}
+			else
+			{
+				std::cout << arg1 << " - " << arg2 << " = " << subtract(arg1, arg2) << std::endl;
+				header.statusID = OK;
+				header.secparam = 0;//1 argument zwrotny - wynik
+				header.datalength -= 8;// 1 argument mniej, czyli 8 bajtow mniej
+				messg[1] = subtract(arg1, arg2);
+			}
+			break;
+		case MNOZENIE:
+			std::cout << "mnozenie\n;";
+			if (arg1 > 0 && arg2 > 0 && multiply(arg1, arg2) < 0)//2 argumenty zwrotne
+			{
+				header.statusID = OVERFLOW;
+				std::cout << arg1 << " * " << arg2 << " = " << multiply(arg1, arg2) << " - przekroczono zakres\n";
+			}
+			else if (arg1 < 0 && arg2 < 0 && add(arg1, arg2) < 0)
+			{
+				header.statusID = OVERFLOW;
+				std::cout << arg1 << " * " << arg2 << " = " << multiply(arg1, arg2) << " - przekroczono zakres\n";
+			}
+			else if (arg1 > 0 && arg2 < 0 && multiply(arg1, arg2) > 0)
+			{
+				header.statusID = UNDERFLOW;
+				std::cout << arg1 << " * " << arg2 << " = " << multiply(arg1, arg2) << " - przekroczono zakres\n";
+			}
+			else if (arg1 < 0 && arg2 > 0 && add(arg1, arg2) > 0)
+			{
+				header.statusID = UNDERFLOW;
+				std::cout << arg1 << " * " << arg2 << " = " << multiply(arg1, arg2) << " - przekroczono zakres\n";
+			}
+			else//1 argument zwrotny - wynik
+			{
+				header.statusID = OK;
+				header.secparam = 0;
+				header.datalength -= 8;// 1 argument mniej, czyli 8 bajtow mniej
+				std::cout << arg1 << " * " << arg2 << " = " << multiply(arg1, arg2) << std::endl;
+				messg[1] = multiply(arg1, arg2);
+			}
+			break;
+		case DZIELENIE:
+			std::cout << "dzielenie\n";
+			if (!arg2)//2 argumenty zwrotne
+			{
+				header.statusID = ZERODIV;
+				std::cout << arg1 << " / " << arg2 << " = ? - dzielenie przez zero\n";
+			}
+			else//dzielenie przez liczby calkowite - przepelnienie czesci calkowitej jest niemozliwe
+			{
+				double result = divide(arg1, arg2);
+				std::cout << arg1 << " / " << arg2 << " = " << result << std::endl;
+				if ((double)arg1 / arg2 > (max / 1000))//przekroczony zakres double'a/1000  - nie mozna uzyc doubleTo2Int, wysylana jest czesc calkowita
+				{
+					header.secparam = 0;//zwraca tylko czesc calkowita wyniku
+					header.datalength -= 8;// 1 argument mniej, czyli 8 bajtow mniej
+					header.statusID = INTONLY;
+					std::cout << "Liczba za duza by podzielic ja na czesc calkowita i ulamkowa\n";
+					arg1 /= arg2;
+					messg[1] = arg1;
+				}
+				else//2 argumenty zwrotne - czesc calkowita i 3-cyfrowa liczba po przecinku
+				{
+					double result = divide(arg1, arg2);
+					std::cout << arg1 << " / " << arg2 << " = ";
+					doubleTo2Int(result, arg1, arg2);
+					std::cout << arg1 << "." << arg2 << std::endl;
+					header.statusID = OK;
+					messg[1] = arg1;//calkowita
+					messg[2] = arg2;//ulamek
+				}
+			}
+			break;
+		case WIEKSZA:
+			std::cout << ">=\n";
+			header.statusID = OK;
+			header.secparam = 0;//zwraca wynik 0 lub 1
+			header.datalength -= 8;// 1 argument mniej, czyli 8 bajtow mniej
+			messg[1] = greaterEqual(arg1, arg2);
+			if (messg[1]) std::cout << arg1 << " >= " << arg2 << std::endl;
+			else std::cout << arg1 << " < " << arg2 << std::endl;
+			break;
+		case MNIEJSZA:
+			std::cout << "<=\n";
+			header.statusID = OK;
+			header.secparam = 0;//zwraca wynik 0 lub 1
+			header.datalength -= 8;// 1 argument mniej, czyli 8 bajtow mniej
+			messg[1] = lesserEqual(arg1, arg2);
+			if (messg[1]) std::cout << arg1 << " <= " << arg2 << std::endl;
+			else std::cout << arg1 << " > " << arg2 << std::endl;
+			break;
+		case POTEGA:
+			std::cout << "potegowanie (podstawa, wykladnik)\n";
+			if (!arg1 && !arg2)//zero do zerowej
+			{
+				header.statusID = INVALIDARG;
+				std::cout << arg1 << " ^ " << arg2 << " - symbol nieoznaczony\n";
+			}
+			else if (!arg1 && arg2 < 0)//zero do minus pierwszej itd.
+			{
+				header.statusID = ZERODIV;
+				std::cout << arg1 << " ^ " << arg2 << " - dzielenie przez zero\n";
+			}
+			else if (arg1 > 0 && power(arg1, arg2) < 0)//overflow
+			{
+				header.statusID = OVERFLOW;
+				std::cout << arg1 << " ^ " << arg2 << " = +" << max << " - przekroczono zakres\n";
+			}
+			else if (arg1 < 0 && arg2 % 2 == 0 && power(arg1, arg2) < 0)//overflow
+			{
+				header.statusID = OVERFLOW;
+				std::cout << arg1 << " ^ " << arg2 << " = +" << max << " - przekroczono zakres\n";
+			}
+			else if (arg1 < 0 && arg2 % 2 == 1 && power(arg1, arg2) > 0)//underflow
+			{
+				header.statusID = UNDERFLOW;
+				std::cout << arg1 << " ^ " << arg2 << " < " << max << " - przekroczono zakres\n";
+			}
+			else
+			{
+				header.statusID = OK;
+				header.secparam = 0;//zwraca wynik
+				header.datalength -= 8;// 1 argument mniej, czyli 8 bajtow mniej
+				messg[1] = power(arg1, arg2);
+				std::cout << arg1 << " ^ " << arg2 << " = " << messg[1] << std::endl;
 
+			}
+			break;
+		case PIERWIASTEK:
+			std::cout << "pierwiastek (podstawa, stopien)\n";
+			if (arg1 < 0)//funkcja pow(x,y): "If the base is finite negative and the exponent is finite but not an integer value, it causes a domain error." + pierwistek stopnia parzystego z liczby ujemnej
+			{
+				header.statusID = INVALIDARG;
+				std::cout << "Pierwiastek " << arg2 << "-ego stopnia z " << arg1 << " nie jest rzeczywisty\n";
+			}
+			else if (arg2 <= 0)//pierwiastek ujemnego stopnia
+			{
+				header.statusID = INVALIDARG;
+				std::cout << "Pierwiastek " << arg2 << "-ego stopnia nie istnieje\n";
+			}
+			else
+			{
+				std::cout << "Pierwiastek " << arg2 << "-ego stopnia z " << arg1 << " = ";
+				double result = root(arg1, arg2);
+				std::cout << result << std::endl;
+				doubleTo2Int(result, arg1, arg2);//wynik jest ponad polowe mniejszy niz podstawa, zakres ok
+				std::cout << arg1 << "." << arg2 << std::endl;
+				header.statusID = OK;
+				messg[1] = arg1;
+				messg[2] = arg2;
+			}
+			break;
+		}
 	}
+	messg[0] = createMessage(header);
+}
 
-	std::cout << "\nStatus: " << header.statusID << "\nDlugosc danych: " << header.datalength << "\nArgumentow: " << header.secparam + 1 << "\nID sesji: " << header.sessionID << std::endl;
-
-
-	Uint64 res1, res2;
-	switch (header.operationID) {
-	case 0: { //dodawanie
-		header.secparam = 0;
-		res1 = add(messg[1], messg[2]);
-		break;
-	}
-	case 1: { //odejmowanie
-		header.secparam = 0;
-		res1 = subtract(messg[1], messg[2]);
-		break;
-	}
-	case 2: { //mnożenie
-		header.secparam = 0;
-		res1 = multiply(messg[1], messg[2]);
-		break;
-	}
-	case 3: { //dzielenie
-		header.secparam = 1;
-		float resoult = divide(messg[1], messg[2]);
-		floatTo2Int(resoult, res1, res2); ///poprawowac nad minusem
-		break;
-	}
-	case 4: { // >=
-		header.secparam = 0;
-		res1 = greaterEqual(messg[1], messg[2]);
-		break;
-	}
-	case 5: { // <=
-		header.secparam = 0;
-		res1 = lesserEqual(messg[1], messg[2]);
-		break;
-	}
-	case 6: { // potega (podstawa, wykładnik)
-		res1 = power(messg[1], messg[2]);
-		header.secparam = 0;
-		break;
-	}
-	case 7: { // pierwiaste (podstawa, stopien)
-		header.secparam = 1;
-		float resoult = divide(messg[1], messg[2]);
-		floatTo2Int(resoult, res1, res2);
-		break;
-	}
-	case 8: { //silnia
-		break;
-	}
-	}
-
-	
+Uint64 setSessionID(Uint64 &handshake, std::vector<Uint64>&sessionvec)
+{
+	Uint64 id = 1LL;
+	if (sessionvec.empty())
+		handshake = id;
+	else handshake = sessionvec.size() + 1;
+	sessionvec.push_back(handshake);
+	return handshake;
 }
 
 int main()
 {
-	//serwer
 	unsigned int port;
 	IpAddress ip = ip.getLocalAddress();
 	std::cout << "Adres lokalny IPv4: " << ip << std::endl;
 	std::cout << "Port: ";
 	std::cin >> port;
 	TcpListener listener;
+	std::vector<Uint64>sessions;
 	Socket::Status status;
 	listener.setBlocking(false);
 	status = listener.listen(port);
@@ -171,13 +276,18 @@ int main()
 		status = listener.accept(client);
 		if (status == Socket::Status::Done)
 		{
-			Packet packet;
 			MessageBox(NULL, L"Connected to the server", L"Server notification", MB_OK | MB_ICONINFORMATION);
-			unsigned long long messg[3];
+			Uint64 handshake;
 			size_t bytesrec;
+			client.receive(&handshake, sizeof(handshake), bytesrec);
+			handshake = setSessionID(handshake, sessions);
+			client.send(&handshake, sizeof(handshake));
+			long long messg[3];
 			client.receive(messg, sizeof(messg), bytesrec);
-			Thread thread(serverProcess, messg);
-			thread.launch();
+			serverProcess(messg);
+			Int64 result[3];//odpowiedz - dane protokolu binarnego oraz wynik (w przypadku niecalkowitego przechowuje 3 cyfry po przecinku poprzez mnoznik dziesietny x1000 (1000 razy wieksza liczba)
+			size_t tosend = (messg[0] & DATA_LENGTH_MASK) >> 25;
+			client.send(messg, tosend);//16B lub 24B
 		}
 	}
 	return 0;

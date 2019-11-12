@@ -32,6 +32,7 @@ void serverProcess(Int64 messg[])
 {
 	header header;
 	dispatchMessage(messg[0], header);
+	if (messg[0]==1) goto skip;
 	std::cout << "\nOdebrano zapytanie\nStatus: " << header.statusID << "\nDlugosc danych: " << header.datalength << "\nArgumentow: " << header.secparam + 1 << "\nID sesji: " << header.sessionID << std::endl;
 	if (!header.secparam)
 	{
@@ -165,8 +166,9 @@ void serverProcess(Int64 messg[])
 			std::cout << ">=\n";
 			header.statusID = OK;
 			header.secparam = 0;//zwraca wynik 0 lub 1
-			header.datalength -= 8;// 1 argument mniej, czyli 8 bajtow mniej
-			messg[1] = greaterEqual(arg1, arg2);
+			header.datalength = 16;// 1 argument mniej, czyli 8 bajtow mniej
+			if (arg1 >= arg2) messg[1] = 1;
+			else messg[1] = 0;
 			if (messg[1]) std::cout << arg1 << " >= " << arg2 << std::endl;
 			else std::cout << arg1 << " < " << arg2 << std::endl;
 			break;
@@ -232,7 +234,6 @@ void serverProcess(Int64 messg[])
 			{
 				std::cout << "Pierwiastek " << arg2 << "-ego stopnia z " << arg1 << " = ";
 				double result = root(arg1, arg2);
-				std::cout << result << std::endl;
 				doubleTo2Int(result, arg1, arg2);//wynik jest ponad polowe mniejszy niz podstawa, zakres ok
 				std::cout << arg1 << "." << arg2 << std::endl;
 				header.statusID = OK;
@@ -242,7 +243,9 @@ void serverProcess(Int64 messg[])
 			break;
 		}
 	}
+	skip:
 	messg[0] = createMessage(header);
+	
 }
 
 Uint64 setSessionID(Uint64 &handshake, std::vector<Uint64>&sessionvec)
@@ -257,38 +260,44 @@ Uint64 setSessionID(Uint64 &handshake, std::vector<Uint64>&sessionvec)
 
 int main()
 {
+	std::vector<Uint64>sessions;
 	unsigned int port;
 	IpAddress ip = ip.getLocalAddress();
 	std::cout << "Adres lokalny IPv4: " << ip << std::endl;
 	std::cout << "Port: ";
 	std::cin >> port;
 	TcpListener listener;
-	std::vector<Uint64>sessions;
 	Socket::Status status;
-	listener.setBlocking(false);
 	status = listener.listen(port);
 	if (status == Socket::Status::Done) std::cout << "Serwer nasluchuje polaczenia...\n";
-		//MessageBox(NULL, L"Initialized the listener.", L"Server notification", MB_OK | MB_ICONINFORMATION); //Blokuje serwer do czasu klik OK
-
+	TcpSocket client;
+disconnect:
+	status = listener.accept(client);
+	std::cout << "\nPolaczono z klientem\n";
+	Uint64 handshake;
+	size_t bytesrec;
+	client.receive(&handshake, sizeof(handshake), bytesrec);
+	handshake = setSessionID(handshake, sessions);
+	status=client.send(&handshake, sizeof(handshake));
 	while (true)
 	{
-		TcpSocket client;
-		status = listener.accept(client);
 		if (status == Socket::Status::Done)
 		{
-			// MessageBox(NULL, L"Connected to the server", L"Server notification", MB_OK | MB_ICONINFORMATION); //Blokuje serwer do czasu klik OK
-			std::cout << "\nPolaczono z klientem\n";
-			Uint64 handshake;
-			size_t bytesrec;
-			client.receive(&handshake, sizeof(handshake), bytesrec);
-			handshake = setSessionID(handshake, sessions);
-			client.send(&handshake, sizeof(handshake));
 			long long messg[3];
 			client.receive(messg, sizeof(messg), bytesrec);
 			serverProcess(messg);
-			Int64 result[3];//odpowiedz - dane protokolu binarnego oraz wynik (w przypadku niecalkowitego przechowuje 3 cyfry po przecinku poprzez mnoznik dziesietny x1000 (1000 razy wieksza liczba)
-			size_t tosend = (messg[0] & DATA_LENGTH_MASK) >> 25;
-			client.send(messg, tosend);//16B lub 24B
+			if (messg[0] == 1)
+			{
+				std::cout << "Klient zakonczyl polaczenie.\n";
+				client.disconnect();
+				goto disconnect;
+			}	
+			else
+			{
+				Int64 result[3];//odpowiedz - dane protokolu binarnego oraz wynik (w przypadku niecalkowitego przechowuje 3 cyfry po przecinku poprzez mnoznik dziesietny x1000 (1000 razy wieksza liczba)
+				size_t tosend = (messg[0] & DATA_LENGTH_MASK) >> 25;
+				status = client.send(messg, tosend);//16B lub 24B
+			}
 		}
 	}
 	return 0;

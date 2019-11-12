@@ -267,7 +267,7 @@ int main()
 	Socket::Status status;
 	listener.setBlocking(false);
 	status = listener.listen(port);
-	if (status == Socket::Status::Done) std::cout << "Serwer nasluchuje polaczenia...";
+	if (status == Socket::Status::Done) std::cout << "Serwer nasluchuje polaczenia...\n";
 		//MessageBox(NULL, L"Initialized the listener.", L"Server notification", MB_OK | MB_ICONINFORMATION); //Blokuje serwer do czasu klik OK
 
 	while (true)
@@ -277,7 +277,7 @@ int main()
 		if (status == Socket::Status::Done)
 		{
 			// MessageBox(NULL, L"Connected to the server", L"Server notification", MB_OK | MB_ICONINFORMATION); //Blokuje serwer do czasu klik OK
-			std::cout << "Polaczono\n";
+			std::cout << "\nPolaczono z klientem\n";
 			Uint64 handshake;
 			size_t bytesrec;
 			client.receive(&handshake, sizeof(handshake), bytesrec);

@@ -7,8 +7,65 @@
 using namespace sf;
 const long long max = 9223372036854775807;//(2^64-1)/2 - maksymalna wartosc Int64
 
-//klient
-Uint64 createMessage(const header &header)//wczytuje dane z obiektu do wiadomosci
+void printHeader(header header);
+Uint64 createMessage(const header& header);
+void dispatchMessage(const Uint64& msg, header& header);
+void sendPacket(TcpSocket& client, Uint64 sessionid);
+bool errorCheck(const Socket::Status& status);
+void printHeader(header header);
+
+int main()
+{
+	unsigned int port;
+	std::string renew = "y";
+	TcpSocket client;
+	IpAddress ip;
+	bool new_connect = 1;
+	while (renew == "y") {
+		if (new_connect) {
+			ip = ip.getLocalAddress();
+			std::cout << "Adres IPv4 klienta: " << ip;
+			std::cout << "\nAdres IPv4 serwera: ";
+			std::cin >> ip;
+			std::cout << "Port: ";
+			std::cin >> port;
+			new_connect = 0;
+		}
+		std::cout << "Nawiazywanie polaczenia...\n";
+		Socket::Status status = client.connect(ip, port);
+
+		if (errorCheck(status)) {
+			new_connect = 1;
+			renew = "y";
+		}
+
+		if (status == Socket::Status::Done) {
+			size_t bytesrec;
+			Uint64 handshake = 0;
+			Int64 result[3];
+			header header;
+
+			client.send(&handshake, sizeof(handshake));
+			client.receive(&handshake, sizeof(handshake), bytesrec);
+			sendPacket(client, handshake);
+			client.receive(result, sizeof(result), bytesrec);
+			dispatchMessage(result[0], header);
+
+			std::cout << "\n\nOdebrano odpowiedz:\nWynik: ";
+			if (header.statusID == OK && header.secparam)
+				std::cout << result[1] << "." << result[2];
+			else std::cout << result[1];
+
+			printHeader(header);
+			std::cout << "Jeszcze raz? (y/n) ";
+			std::cin >> renew;
+			new_connect = 0;
+		}
+	}
+	return 0;
+}
+
+Uint64 createMessage(const header &header)//wczytuje dane z obiektu do naglowka wiadomosci
 {
 	unsigned long long message = 0;
 	message += (header.operationID << 61);
@@ -19,8 +76,7 @@ Uint64 createMessage(const header &header)//wczytuje dane z obiektu do wiadomosc
 	return message;
 }
 
-//serwer
-void dispatchMessage(const Uint64 &msg, header &header)//wczytuje dane z wiadomosci do obiektu
+void dispatchMessage(const Uint64 &msg, header &header)//wczytuje dane z naglowka wiadomosci do obiektu
 {
 	header.operationID = (msg & OPERATION_MASK) >> 61;
 	header.statusID = (msg & STATUS_MASK) >> 57;
@@ -34,6 +90,16 @@ void sendPacket(TcpSocket &client, Uint64 sessionid)
 	bool correct_num = 1;
 		while (correct_num) {
 			int nr;
+			std::cout << "\nPodaj numer operacji:\n"
+				<< "0 - dodawanie\n"
+				<< "1 - odejmowanie\n"
+				<< "2 - mnozenie\n"
+				<< "3 - dzielenie\n"
+				<< "4 - <=\n"
+				<< "5 - >=\n"
+				<< "6 - potega (podstawa, wykladnik)\n"
+				<< "7 - pierwiastek (liczba pierwiastkowana, stopien)\n"
+				<< "8 - silnia\n";
 			std::cout << "\nOperacja: ";
 			std::cin >> nr;
 			if (nr >= 0 && nr <= 8)
@@ -71,9 +137,9 @@ void sendPacket(TcpSocket &client, Uint64 sessionid)
 					Int64 pack[3] = { message, arg1, arg2 };
 					std::cout << "\nDane wysylanego pakietu\nWartosc wiadomosci wyslanej to: " << message << " (64-bit)" << std::endl;
 					dispatchMessage(message, nag);
-					std::cout << "ID operacji: " << nag.operationID << "\nStatus: ";
-
-					std::cout << nag.statusID << "\nDlugosc danych: " << nag.datalength << "\nArgumentow: " << nag.secparam + 1 << "\nID sesji: " << nag.sessionID;
+					printHeader(nag);
+					/*std::cout << "ID operacji: " << nag.operationID << "\nStatus: ";
+					std::cout << nag.statusID << "\nDlugosc danych: " << nag.datalength << "\nArgumentow: " << nag.secparam + 1 << "\nID sesji: " << nag.sessionID;*/
 					client.send(pack, sizeof(pack));
 				}
 			}
@@ -83,93 +149,55 @@ void sendPacket(TcpSocket &client, Uint64 sessionid)
 		}
 }
 
-//serwer
-int factorial(const int &arg)
-{
-	if (!arg) return 1;
-	else return arg * factorial(arg - 1);
-}
-
-int main()
-{
-	//klient
-	unsigned int port;
-reconnect:
-	IpAddress ip = ip.getLocalAddress();
-	std::cout << "Adres IPv4 klienta: " << ip;
-	std::cout << "\nAdres IPv4 serwera: ";
-	std::cin >> ip;
-	std::cout << "Port: ";
-	std::cin >> port;
-again:
-	TcpSocket client;
+bool errorCheck(const Socket::Status& status) { //zwraca true jezeli status inny niz Done
 	std::string renew;
-	std::cout << "Nawiazywanie polaczenia...\n";
-	Socket::Status status = client.connect(ip, port);
-next:
-	switch (status)
-	{
-	case Socket::Status::Error:
+	if (status == Socket::Status::Error) {
 		MessageBox(NULL, L"Error occured while connecting to the server.", L"Connection error", MB_OK | MB_ICONERROR);
 		std::cout << "Blad polaczenia. Czy ponowic probe nawiazania polaczenia? (y/n): ";
 		std::cin >> renew;
-		if (renew == "y") goto reconnect;
-		else break;
-	case Socket::Status::Disconnected:
+	}
+	if (status == Socket::Status::Disconnected) {
 		MessageBox(NULL, L"Connection was not established.", L"Connection error", MB_OK | MB_ICONERROR);
 		std::cout << "Blad polaczenia. Czy ponowic probe nawiazania polaczenia? (y/n): ";
 		std::cin >> renew;
-		if (renew == "y") goto reconnect;
-		else break;
-	case Socket::Status::NotReady:
+	}
+	if (status == Socket::Status::NotReady) {
 		MessageBox(NULL, L"A socket is connected but not ready to transmit.", L"Connection error", MB_OK | MB_ICONERROR);
 		std::cout << "Blad polaczenia. Czy ponowic probe nawiazania polaczenia? (y/n): ";
 		std::cin >> renew;
-		if (renew == "y") goto reconnect;
-		else break;
-	case Socket::Status::Partial:
+	}
+	if (status == Socket::Status::Partial) {
 		MessageBox(NULL, L"A socket sent uncomplete data.", L"Connection error", MB_OK | MB_ICONERROR);
 		std::cout << "Blad polaczenia. Czy ponowic probe nawiazania polaczenia? (y/n): ";
 		std::cin >> renew;
-		if (renew == "y") goto reconnect;
-		else break;
-	case Socket::Status::Done:
-		size_t bytesrec;
-		Uint64 handshake = 0;
-		client.send(&handshake, sizeof(handshake));
-		client.receive(&handshake, sizeof(handshake), bytesrec);
-		std::cout << "\nPodaj numer operacji:\n0 - dodawanie\n1 - odejmowanie\n2 - mnozenie\n3 - dzielenie\n"
-			<< "4 - <=\n5 - >=\n6 - potega (podstawa, wykladnik)\n7 - pierwiastek (liczba pierwiastkowana, stopien)\n8 - silnia\n";
-		sendPacket(client, handshake);
-		Int64 result[3];
-		client.receive(result, sizeof(result), bytesrec);
-		header header;
-		dispatchMessage(result[0], header);
-		std::cout << "\n\nOdebrano odpowiedz:\nWynik: ";
-		if (header.statusID == OK && header.secparam)
-			std::cout << result[1] << "." << result[2];
-		else std::cout << result[1];
-		std::cout << "\nID operacji: " << header.operationID;
-		if (!header.operationID && !header.secparam && (header.statusID == INVALIDARG || header.statusID == OVERFLOW || header.statusID == FACTORIALOK))//rozpoznanie operacji silni
-			std::cout << " (silnia)";
-		else if (!header.operationID) std::cout << " (dodawanie)";
-		std::cout << "\nStatus: ";
-		switch (header.statusID)
-		{
-		case OK: std::cout << "OK"; break;
-		case INVALIDARG: std::cout << "INVALIDARG"; break;
-		case INTONLY: std::cout << "INTONLY"; break;
-		case OVERFLOW: std::cout << "OVERFLOW"; break;
-		case UNDERFLOW: std::cout << "UNDERFLOW"; break;
-		case ZERODIV: std::cout << "ZERODIV"; break;
-		case FACTORIALOK: std::cout << "FACTORIAL OK"; break;
-		}
-		std::cout << "\nDlugosc danych: " << header.datalength << "\nArgumentow: " << header.secparam + 1 << "\nID sesji: " << header.sessionID << std::endl;
-		break;
 	}
-	std::string ans;
-	std::cout << "Jeszcze raz? (y/n) ";
-	std::cin >> ans;
-	if (ans == "y") goto again;
-	return 0;
+	if (renew == "y") return true;
+	return false;
+}
+
+void printHeader(header header) { //drukuje naglowek
+	std::cout << "\nID operacji: " << header.operationID;
+	if (!header.operationID && !header.secparam && (header.statusID == INVALIDARG || header.statusID == OVERFLOW || header.statusID == FACTORIALOK))//rozpoznanie operacji silni
+		std::cout << " (silnia)";
+	if (header.operationID == 0) std::cout << " (dodawanie)";
+	if (header.operationID == 1) std::cout << " (odejmowanie)";
+	if (header.operationID == 2) std::cout << " (mnozenie)";
+	if (header.operationID == 3) std::cout << " (dzielenie)";
+	if (header.operationID == 4) std::cout << " (<=)";
+	if (header.operationID == 5) std::cout << " (>=)";
+	if (header.operationID == 6) std::cout << " (potegowanie)";
+	if (header.operationID == 7) std::cout << " (pierwiastkowanie)";
+	std::cout << "\nStatus: ";
+	switch (header.statusID)
+	{
+	case Null: std::cout << "Null"; break;
+	case OK: std::cout << "OK"; break;
+	case INVALIDARG: std::cout << "INVALIDARG"; break;
+	case INTONLY: std::cout << "INTONLY"; break;
+	case OVERFLOW: std::cout << "OVERFLOW"; break;
+	case UNDERFLOW: std::cout << "UNDERFLOW"; break;
+	case ZERODIV: std::cout << "ZERODIV"; break;
+	case FACTORIALOK: std::cout << "FACTORIAL OK"; break;
+	}
+	std::cout << "\nDlugosc danych: " << header.datalength << "\nArgumentow: " << header.secparam + 1 << "\nID sesji: " << header.sessionID << std::endl;
 }

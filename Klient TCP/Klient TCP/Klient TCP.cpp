@@ -129,7 +129,7 @@ next:
 		Uint64 handshake = 0;
 		client.send(&handshake, sizeof(handshake));
 		client.receive(&handshake, sizeof(handshake), bytesrec);
-		std::cout << "\nPodaj numer operacji:\n0 - dodawanie\n1 - odejmowanie\n2 - mnozenie\n3 - dzielenie\n4 - >=\n5 - <=\n6 - potega (podstawa, wykladnik)\n7 - pierwiastek (liczba pierwiastkowana, stopien)\n8 - silnia\npozostale - wyjscie z programu\n";
+		std::cout << "\nPodaj numer operacji:\n0 - dodawanie\n1 - odejmowanie\n2 - mnozenie\n3 - dzielenie\n4 - <=\n5 - >=\n6 - potega (podstawa, wykladnik)\n7 - pierwiastek (liczba pierwiastkowana, stopien)\n8 - silnia\npozostale - wyjscie z programu\n";
 		sendPacket(client, handshake);
 		Int64 result[3];
 		client.receive(result, sizeof(result), bytesrec);

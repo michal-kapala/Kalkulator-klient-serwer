@@ -9,5 +9,6 @@
 
 struct header
 {
-	sf::Uint64 operationID, statusID, datalength, secparam, sessionID;
+	sf::Uint64 operationID;
+	sf::Int64 statusID, datalength, secparam, sessionID;
 };

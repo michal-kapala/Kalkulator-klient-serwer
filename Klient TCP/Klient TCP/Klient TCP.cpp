@@ -1,9 +1,11 @@
 ﻿#include "pch.h"
 #include "header masks.hpp"
+#include "server response.hpp"
 #include <iostream>
 #include <windows.h>
 #include <SFML/Network.hpp>
 using namespace sf;
+const long long max = 9223372036854775807;//(2^64-1)/2 - maksymalna wartosc Int64
 
 //klient
 Uint64 createMessage(const header &header)//wczytuje dane z obiektu do wiadomosci
@@ -27,28 +29,26 @@ void dispatchMessage(const Uint64 &msg, header &header)//wczytuje dane z wiadomo
 	header.sessionID = (msg & SESSIONID_MASK) >> 8;
 }
 
-void sendPacket(TcpSocket &client)
+void sendPacket(TcpSocket &client, Uint64 sessionid)
 {
-	int op_code; //zmienna przechowująca kod operacji
-	std::cout << "\nPodaj numer operacji:\n0 - dodawanie\n1 - odejmowanie\n2 - mnozenie\n3 - dzielenie\n4 - >=\n5 - <=\n6 - potega (podstawa, wykladnik)\n7 - pierwiastek (liczba pierwiastkowana, stopien)\n8 - silnia\npozostale - wyjscie z programu\nOperacja: ";
-	std::cin >> op_code;
-
-	if (op_code >=0 && op_code <=8) //sprawdzanie czy w zakresie
+	int nr;
+	std::cout << "\nOperacja: ";
+	std::cin >> nr;
+	if (nr >= 0 && nr <= 8)
 	{
 		header nag;
-		nag.operationID = op_code;
-		nag.statusID = 0;//do ustawienia przez serwer
-		nag.sessionID = 0;//do ustawienia przez serwer
-
+		nag.operationID = nr;
+		nag.statusID = Null;//do ustawienia przez serwer
+		nag.sessionID = sessionid;//ustawione przez serwer
 		if (nag.operationID == 8)
 		{
 			nag.secparam = 0;
 			nag.datalength = 16;//16 bajtow
-			Uint64 arg1;
+			Int64 arg1;
 			std::cout << "Podaj argument: ";
 			std::cin >> arg1;
-			Uint64 message = createMessage(nag); //3 bity - operacja, 4 bity - status, 32 bity dlugosc danych w bitach, 1 bit - flaga argumentow (0 - 1 arg., 1 - 2 arg.), 16 bitow - identyfikator sesji, 8 bitow dopelnienia
-			Uint64 pack[2] = { message, arg1 };
+			Int64 message = createMessage(nag);//3 bity - operacja, 4 bity - status, 32 bity dlugosc danych w bitach, 1 bit - flaga argumentow (0 - 1 arg., 1 - 2 arg.), 16 bitow - identyfikator sesji, 8 bitow dopelnienia
+			Int64 pack[2] = { message, arg1 };
 			std::cout << "\nDane wysylanego pakietu\nWartosc wiadomosci wyslanej to: " << message << " (64-bit)" << std::endl;
 			dispatchMessage(message, nag);
 			std::cout << "ID operacji: " << nag.operationID << "\nStatus: " << nag.statusID << "\nDlugosc danych: " << nag.datalength << "\nArgumentow: " << nag.secparam + 1 << "\nID sesji: " << nag.sessionID;
@@ -58,16 +58,18 @@ void sendPacket(TcpSocket &client)
 		{
 			nag.secparam = 1;
 			nag.datalength = 24;//24 bajty
-			Uint64 arg1, arg2;
+			Int64 arg1, arg2;
 			std::cout << "\nPodaj 2 argumenty:\nArgument 1: ";
 			std::cin >> arg1;
-			std::cout << "\nArgument 2: ";
+			std::cout << "Argument 2: ";
 			std::cin >> arg2;
-			Uint64 message = createMessage(nag);//3 bity - operacja, 4 bity - status, 32 bity dlugosc danych w bitach, 1 bit - flaga argumentow (0 - 1 arg., 1 - 2 arg.), 16 bitow - identyfikator sesji, 8 bitow dopelnienia
-			Uint64 pack[3] = { message, arg1, arg2 };
+			Int64 message = createMessage(nag);//3 bity - operacja, 4 bity - status, 32 bity dlugosc danych w bitach, 1 bit - flaga argumentow (0 - 1 arg., 1 - 2 arg.), 16 bitow - identyfikator sesji, 8 bitow dopelnienia
+			Int64 pack[3] = { message, arg1, arg2 };
 			std::cout << "\nDane wysylanego pakietu\nWartosc wiadomosci wyslanej to: " << message << " (64-bit)" << std::endl;
 			dispatchMessage(message, nag);
-			std::cout << "ID operacji: " << nag.operationID << "\nStatus: " << nag.statusID << "\nDlugosc danych: " << nag.datalength << "\nArgumentow: " << nag.secparam + 1 << "\nID sesji: " << nag.sessionID;
+			std::cout << "ID operacji: " << nag.operationID << "\nStatus: ";
+
+			std::cout << nag.statusID << "\nDlugosc danych: " << nag.datalength << "\nArgumentow: " << nag.secparam + 1 << "\nID sesji: " << nag.sessionID;
 			client.send(pack, sizeof(pack));
 		}
 	}
@@ -95,6 +97,7 @@ reconnect:
 	std::string renew;
 	std::cout << "Nawiazywanie polaczenia...\n";
 	Socket::Status status = client.connect(ip, port);
+next:
 	switch (status)
 	{
 	case Socket::Status::Error:
@@ -122,7 +125,36 @@ reconnect:
 		if (renew == "tak") goto reconnect;
 		else break;
 	case Socket::Status::Done:
-		sendPacket(client);
+		size_t bytesrec;
+		Uint64 handshake = 0;
+		client.send(&handshake, sizeof(handshake));
+		client.receive(&handshake, sizeof(handshake), bytesrec);
+		std::cout << "\nPodaj numer operacji:\n0 - dodawanie\n1 - odejmowanie\n2 - mnozenie\n3 - dzielenie\n4 - >=\n5 - <=\n6 - potega (podstawa, wykladnik)\n7 - pierwiastek (liczba pierwiastkowana, stopien)\n8 - silnia\npozostale - wyjscie z programu\n";
+		sendPacket(client, handshake);
+		Int64 result[3];
+		client.receive(result, sizeof(result), bytesrec);
+		header header;
+		dispatchMessage(result[0], header);
+		std::cout << "\n\nOdebrano odpowiedz:\nWynik: ";
+		if (header.statusID == OK && header.secparam)
+			std::cout << result[1] << "." << result[2];
+		else std::cout << result[1];
+		std::cout << "\nID operacji: " << header.operationID;
+		if (!header.operationID && !header.secparam && (header.statusID == INVALIDARG || header.statusID == OVERFLOW || header.statusID == FACTORIALOK))//rozpoznanie operacji silni
+			std::cout << " (silnia)";
+		else if (!header.operationID) std::cout << " (dodawanie)";
+		std::cout << "\nStatus: ";
+		switch (header.statusID)
+		{
+		case OK: std::cout << "OK"; break;
+		case INVALIDARG: std::cout << "INVALIDARG"; break;
+		case INTONLY: std::cout << "INTONLY"; break;
+		case OVERFLOW: std::cout << "OVERFLOW"; break;
+		case UNDERFLOW: std::cout << "UNDERFLOW"; break;
+		case ZERODIV: std::cout << "ZERODIV"; break;
+		case FACTORIALOK: std::cout << "FACTORIAL OK"; break;
+		}
+		std::cout << "\nDlugosc danych: " << header.datalength << "\nArgumentow: " << header.secparam + 1 << "\nID sesji: " << header.sessionID << std::endl;
 		break;
 	}
 	return 0;

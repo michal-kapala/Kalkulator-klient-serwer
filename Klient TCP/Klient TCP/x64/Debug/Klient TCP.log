@@ -1,3 +1,7 @@
 ﻿  pch.cpp
   Klient TCP.cpp
-sfml-network.lib(sfml-network-2.dll) : fatal error LNK1112: module machine type 'x86' conflicts with target machine type 'x64'
+c:\users\michal\desktop\kalkulator-klient-serwer\klient tcp\klient tcp\server response.hpp(7): warning C4005: "OVERFLOW": ponowna definicja makra
+  c:\program files (x86)\windows kits\10\include\10.0.17763.0\ucrt\corecrt_math.h(967): note: zobacz poprzednią definicję „OVERFLOW”
+c:\users\michal\desktop\kalkulator-klient-serwer\klient tcp\klient tcp\server response.hpp(8): warning C4005: "UNDERFLOW": ponowna definicja makra
+  c:\program files (x86)\windows kits\10\include\10.0.17763.0\ucrt\corecrt_math.h(968): note: zobacz poprzednią definicję „UNDERFLOW”
+sfml-network.lib(sfml-network-2.dll) : fatal error LNK1112: wystąpił konflikt typu maszyny modułu „x86” z typem maszyny docelowej „x64”

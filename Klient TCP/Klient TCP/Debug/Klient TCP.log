@@ -3,5 +3,4 @@ C:\Users\jakub\source\repos\michal-kapala\Kalkulator-klient-serwer\Klient TCP\Kl
 C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\ucrt\corecrt_math.h(967): message :  see previous definition of 'OVERFLOW'
 C:\Users\jakub\source\repos\michal-kapala\Kalkulator-klient-serwer\Klient TCP\Klient TCP\server response.hpp(8,1): warning C4005:  'UNDERFLOW': macro redefinition
 C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\ucrt\corecrt_math.h(968): message :  see previous definition of 'UNDERFLOW'
-C:\Users\jakub\source\repos\michal-kapala\Kalkulator-klient-serwer\Klient TCP\Klient TCP\Klient TCP.cpp(109,5): warning C4102:  'next': unreferenced label
   Klient TCP.vcxproj -> C:\Users\jakub\Source\Repos\michal-kapala\Kalkulator-klient-serwer\Klient TCP\Debug\Klient TCP.exe

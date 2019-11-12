@@ -16,8 +16,15 @@ void doubleTo2Int(double src, Int64& dest1, Int64& dest2) {
 }
 
 double root(Int64 arg1, Int64 arg2) {
+	bool negative = false;
+	bool parity = arg2 % 2;
+	if (arg1 < 0 && parity) {
+		arg1 *= (-1);
+		negative = true;
+	}
 	double index = 1.0 / (double)arg2;
 	double ret = pow((double)arg1, index);
+	if (negative) ret *= (-1);
 	//std::cout << "Operacja pierwiastkowania: (" << arg2 << ")th root of " << arg1 << " = " << ret << "\n";
 	return ret;
 }

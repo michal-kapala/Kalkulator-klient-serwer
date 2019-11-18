@@ -3,6 +3,7 @@
 #include "server response.hpp"
 #include <iostream>
 #include <windows.h>
+#include <bitset>
 #include <SFML/Network.hpp>
 using namespace sf;
 const long long max = 9223372036854775807;//(2^64-1)/2 - maksymalna wartosc Int64
@@ -13,7 +14,7 @@ void dispatchMessage(const Uint64& msg, header& header);
 void sendPacket(TcpSocket& client, Uint64 sessionid);
 bool errorCheck(const Socket::Status& status);
 void printHeader(header header);
-
+void moveByByte(Int64& destination,Int64& source, bool debug = false);
 int main()
 {
 	//klient
@@ -130,6 +131,7 @@ void dispatchMessage(const Uint64 &msg, header &header)//wczytuje dane z naglowk
 
 void sendPacket(TcpSocket &client, Uint64 sessionid)
 {
+	bool debug = false; //ustawic jezeli chcemy widziec zmienne w bitach
 	bool correct_num = 1;
 	while (correct_num) {
 		int nr;
@@ -161,9 +163,10 @@ void sendPacket(TcpSocket &client, Uint64 sessionid)
 				std::cout << "Podaj argument: ";
 				std::cin >> arg1;
 				Int64 message = createMessage(nag);//3 bity - operacja, 4 bity - status, 32 bity dlugosc danych w bitach, 1 bit - flaga argumentow (0 - 1 arg., 1 - 2 arg.), 16 bitow - identyfikator sesji, 8 bitow dopelnienia
-				Int64 pack[2] = { message, arg1 };
 				std::cout << "\nDane wysylanego pakietu\nWartosc wiadomosci wyslanej to: " << message << " (64-bit)" << std::endl;
 				dispatchMessage(message, nag);
+				moveByByte(message, arg1, debug);
+				Int64 pack[2] = { message, arg1 };
 				std::cout << "ID operacji: " << nag.operationID << "\nStatus: " << nag.statusID << "\nDlugosc danych: " << nag.datalength << "\nArgumentow: " << nag.secparam + 1 << "\nID sesji: " << nag.sessionID;
 				client.send(pack, sizeof(pack));
 			}
@@ -177,10 +180,12 @@ void sendPacket(TcpSocket &client, Uint64 sessionid)
 				std::cout << "Argument 2: ";
 				std::cin >> arg2;
 				Int64 message = createMessage(nag);//3 bity - operacja, 4 bity - status, 32 bity dlugosc danych w bitach, 1 bit - flaga argumentow (0 - 1 arg., 1 - 2 arg.), 16 bitow - identyfikator sesji, 8 bitow dopelnienia
-				Int64 pack[3] = { message, arg1, arg2 };
 				std::cout << "\nDane wysylanego pakietu\nWartosc wiadomosci wyslanej to: " << message << " (64-bit)" << std::endl;
 				dispatchMessage(message, nag);
+				moveByByte(message, arg1, debug);
+				moveByByte(arg1, arg2, debug);
 				printHeader(nag);
+				Int64 pack[3] = { message, arg1, arg2 };
 				/*std::cout << "ID operacji: " << nag.operationID << "\nStatus: ";
 				std::cout << nag.statusID << "\nDlugosc danych: " << nag.datalength << "\nArgumentow: " << nag.secparam + 1 << "\nID sesji: " << nag.sessionID;*/
 				client.send(pack, sizeof(pack));
@@ -243,4 +248,42 @@ void printHeader(header header) { //drukuje naglowek
 	case FACTORIALOK: std::cout << "FACTORIAL OK"; break;
 	}
 	std::cout << "\nDlugosc danych: " << header.datalength << "\nArgumentow: " << header.secparam + 1 << "\nID sesji: " << header.sessionID << std::endl;
+}
+
+void moveByByte(Int64 &destination,Int64 &source , bool debug) {
+	Int64 n = 0;
+	bool buff[8];
+	Int64 displayInt = false;
+
+	if(debug) std::cout << "Source: " << std::bitset<64>(source) << "\n" << "Destination: " << std::bitset<64>(destination) << "\n";
+
+	//zapisuje pierwsze 8 bitow source w tablicy buff
+	for (int i = 0; i != 8; i++) {
+		buff[i] = (source >> i) & 1LL;
+	}
+
+	//zapisuje w displayInt tablice buff
+	for (int i = 0; i != 8; i++) {
+		displayInt ^= (-buff[i] ^ displayInt) & (1LL << i);
+	}
+	if(debug) std::cout << "Moved byte: " << std::bitset<8>(displayInt) << "\n";
+
+	//zapisuje tablice buff na ostatnich 8 bitach destination
+	for (int i = 56; i != 68; i++) {
+		destination ^= (-buff[(i-56)] ^ destination) & (1LL << i);
+	}
+	if (debug) std::cout << "rewitten destination: " << std::bitset<64>(destination) << "\n";
+
+	//przesuwa wszystkie bity source o 8 bit do przodu. Po wykonaniu ostatnie 8 bitow jest zduplikowane
+	for (int i = 0; i != 56; i++) { //56 bitow zostanie przesuniete
+		bool bit;
+		bit = (source >> i+8) & 1LL;
+		source ^= (-bit ^ source) & (1LL << i);
+	}
+
+	//nadpisuje ostatnie 8 bitów source zerami
+	for (int i = 56; i != 64;i++ ) {
+		source &= ~(1LL << i);
+	}
+	if (debug) std::cout << "Moved source: " << std::bitset<64>(source) << "\n";
 }

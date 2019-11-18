@@ -265,7 +265,7 @@ Uint64 setSessionID(Uint64 &handshake, std::vector<Uint64>&sessionvec)
 
 int main()
 {
-	bool debug = true;
+	bool debug = false;
 	std::vector<Uint64>sessions;
 	unsigned int port;
 	IpAddress ip = ip.getLocalAddress();

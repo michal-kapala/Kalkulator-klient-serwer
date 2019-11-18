@@ -1,4 +1,3 @@
-/Serwer TCP/.vs
-/Klient TCP/.vs
-/Klient TCP/Klient TCP/Klient TCP.vcxproj
-/Serwer TCP/Serwer TCP/Serwer TCP.vcxproj
+.vs
+*.vcxproj
+*.vcxproj

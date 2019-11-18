@@ -69,14 +69,11 @@ next:
 		Int64 result[3];
 		client.receive(result, sizeof(result), bytesrec);
 		if (sizeof(result) == 16) {
-			Int64 redundant = false;
 			reverseByByte(result[1], result[0], debug);
-			moveByByte(redundant, result[0], debug);
 		}
 		if (sizeof(result) == 24) {
-			Int64 redundant = false;
+			reverseByByte(result[2], result[1], debug);
 			reverseByByte(result[1], result[0], debug);
-			moveByByte(redundant, result[0], debug);
 		}
 		header header;
 		dispatchMessage(result[0], header);

@@ -292,15 +292,11 @@ disconnect:
 			long long messg[3];
 			client.receive(messg, sizeof(messg), bytesrec);
 			if (sizeof(messg) == 16) {
-				Int64 redundant = false;
 				reverseByByte(messg[1], messg[0],debug);
-				moveByByte(redundant, messg[0], debug);
 			}
 			else if (sizeof(messg) == 24) {
-				Int64 redundant = false;
 				reverseByByte(messg[2], messg[1],debug);
 				reverseByByte(messg[1], messg[0],debug);
-				moveByByte(redundant, messg[0], debug);
 			}
 			serverProcess(messg);
 			if (messg[0] == 1)

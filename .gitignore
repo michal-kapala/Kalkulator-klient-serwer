@@ -1,7 +1,4 @@
-﻿################################################################################
-# Ten plik .gitignore został utworzony automatycznie przez Microsoft(R) Visual Studio.
-################################################################################
-
-/Serwer TCP/.vs/Serwer TCP/v15/Browse.VC.opendb
-/Klient TCP/.vs/Klient TCP/v16/Browse.VC.opendb
-/Serwer TCP/.vs/Serwer TCP/v16/Browse.VC.opendb
+/Serwer TCP/.vs
+/Klient TCP/.vs
+/Klient TCP/Klient TCP/Klient TCP.vcxproj
+/Serwer TCP/Serwer TCP/Serwer TCP.vcxproj

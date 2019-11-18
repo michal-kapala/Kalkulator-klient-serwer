@@ -379,7 +379,7 @@ void reverseByByte(Int64& destination, Int64& source, bool debug) {
 	}
 
 	//nadpisuje ostatnie 8 bitów source zerami
-	for (int i = 56; i != 64; i++) {
+	for (int i = 0; i != 8; i++) {
 		source &= ~(1LL << i);
 	}
 	if (debug) std::cout << "Moved source: " << std::bitset<64>(source) << "\n";
@@ -393,8 +393,8 @@ void reverseByByte(Int64& destination, Int64& source, bool debug) {
 	//przesuwa wszystkie bity destination o 8 bit do tylu. Po wykonaniu pierwsze 8 bitow jest zduplikowane
 	for (int i = 0; i != 56; i++) { //56 bitow zostanie przesuniete
 		bool bit;
-		bit = (source >> i + 8) & 1LL;
-		source ^= (-bit ^ source) & (1LL << i);
+		bit = (destination >> i + 8) & 1LL;
+		destination ^= (-bit ^ destination) & (1LL << i);
 	}
 
 	//zapisuje tablice buff na pierwszych 8 bitach destination

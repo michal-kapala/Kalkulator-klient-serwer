@@ -1,14 +1,1 @@
-﻿  Klient TCP.cpp
-C:\Users\jakub\source\repos\michal-kapala\Kalkulator-klient-serwer\Klient TCP\Klient TCP\server response.hpp(7,1): warning C4005:  'OVERFLOW': macro redefinition
-C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\ucrt\corecrt_math.h(967): message :  see previous definition of 'OVERFLOW'
-C:\Users\jakub\source\repos\michal-kapala\Kalkulator-klient-serwer\Klient TCP\Klient TCP\server response.hpp(8,1): warning C4005:  'UNDERFLOW': macro redefinition
-C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\ucrt\corecrt_math.h(968): message :  see previous definition of 'UNDERFLOW'
-C:\Users\jakub\source\repos\michal-kapala\Kalkulator-klient-serwer\Klient TCP\Klient TCP\Klient TCP.cpp(281,27): warning C4804:  '-': unsafe use of type 'bool' in operation
-C:\Users\jakub\source\repos\michal-kapala\Kalkulator-klient-serwer\Klient TCP\Klient TCP\Klient TCP.cpp(287,28): warning C4804:  '-': unsafe use of type 'bool' in operation
-C:\Users\jakub\source\repos\michal-kapala\Kalkulator-klient-serwer\Klient TCP\Klient TCP\Klient TCP.cpp(294,23): warning C4554:  '>>': check operator precedence for possible error; use parentheses to clarify precedence
-C:\Users\jakub\source\repos\michal-kapala\Kalkulator-klient-serwer\Klient TCP\Klient TCP\Klient TCP.cpp(295,19): warning C4804:  '-': unsafe use of type 'bool' in operation
-C:\Users\jakub\source\repos\michal-kapala\Kalkulator-klient-serwer\Klient TCP\Klient TCP\Klient TCP.cpp(322,27): warning C4804:  '-': unsafe use of type 'bool' in operation
-C:\Users\jakub\source\repos\michal-kapala\Kalkulator-klient-serwer\Klient TCP\Klient TCP\Klient TCP.cpp(329,25): warning C4554:  '>>': check operator precedence for possible error; use parentheses to clarify precedence
-C:\Users\jakub\source\repos\michal-kapala\Kalkulator-klient-serwer\Klient TCP\Klient TCP\Klient TCP.cpp(330,19): warning C4804:  '-': unsafe use of type 'bool' in operation
-C:\Users\jakub\source\repos\michal-kapala\Kalkulator-klient-serwer\Klient TCP\Klient TCP\Klient TCP.cpp(335,30): warning C4804:  '-': unsafe use of type 'bool' in operation
-  Klient TCP.vcxproj -> C:\Users\jakub\Source\Repos\michal-kapala\Kalkulator-klient-serwer\Klient TCP\Debug\Klient TCP.exe
+﻿  Klient TCP.vcxproj -> C:\Users\jakub\Source\Repos\michal-kapala\Kalkulator-klient-serwer\Klient TCP\Debug\Klient TCP.exe

@@ -4,10 +4,14 @@
 #include <iostream>
 #include <windows.h>
 #include <vector>
+#include <bitset>
 #include <SFML/Network.hpp>//linkowanie dynamiczne plikow .dll
 using namespace sf;
 const long long max = 9223372036854775807;
 const long long min = max * -1 - 1;
+void moveByByte(Int64& destination, Int64& source, bool debug = false);
+void reverseByByte(Int64& destination, Int64& source, bool debug = false);
+
 Uint64 createMessage(const header &header)//wczytuje dane z obiektu do wiadomosci
 {
 	unsigned long long message = 0;
@@ -30,6 +34,7 @@ void dispatchMessage(const Uint64 &msg, header &header)//wczytuje dane z wiadomo
 
 void serverProcess(Int64 messg[])
 {
+
 	header header;
 	dispatchMessage(messg[0], header);
 	if (messg[0]==1) goto skip;
@@ -260,6 +265,7 @@ Uint64 setSessionID(Uint64 &handshake, std::vector<Uint64>&sessionvec)
 
 int main()
 {
+	bool debug = true;
 	std::vector<Uint64>sessions;
 	unsigned int port;
 	IpAddress ip = ip.getLocalAddress();
@@ -285,6 +291,15 @@ disconnect:
 		{
 			long long messg[3];
 			client.receive(messg, sizeof(messg), bytesrec);
+			if (sizeof(messg) == 16) {
+				reverseByByte(messg[1], messg[0],debug);
+			}
+			else if (sizeof(messg) == 24) {
+				Int64 redundant = false;
+				reverseByByte(messg[2], messg[1],debug);
+				reverseByByte(messg[1], messg[0],debug);
+				moveByByte(redundant, messg[0], debug);
+			}
 			serverProcess(messg);
 			if (messg[0] == 1)
 			{
@@ -296,9 +311,93 @@ disconnect:
 			{
 				Int64 result[3];//odpowiedz - dane protokolu binarnego oraz wynik (w przypadku niecalkowitego przechowuje 3 cyfry po przecinku poprzez mnoznik dziesietny x1000 (1000 razy wieksza liczba)
 				size_t tosend = (messg[0] & DATA_LENGTH_MASK) >> 25;
+				///kod serwera jest 10 razy bardziej nieczytelny niz klienta
+				if (tosend == 16) {
+					moveByByte(messg[0], messg[1],debug);
+				}
+				else if (tosend == 24) {
+					moveByByte(messg[0], messg[1],debug);
+					moveByByte(messg[1], messg[2],debug);
+				}
 				status = client.send(messg, tosend);//16B lub 24B
 			}
 		}
 	}
 	return 0;
+}
+
+void moveByByte(Int64& destination, Int64& source, bool debug) {
+	Int64 n = 0;
+	bool buff[8];
+	Int64 displayInt = false;
+
+	if (debug) std::cout << "Source: " << std::bitset<64>(source) << "\n" << "Destination: " << std::bitset<64>(destination) << "\n";
+
+	//zapisuje pierwsze 8 bitow source w tablicy buff
+	for (int i = 0; i != 8; i++) {
+		buff[i] = (source >> i) & 1LL;
+	}
+
+	//zapisuje w displayInt tablice buff
+	for (int i = 0; i != 8; i++) {
+		displayInt ^= (-buff[i] ^ displayInt) & (1LL << i);
+	}
+	if (debug) std::cout << "Moved byte: " << std::bitset<8>(displayInt) << "\n";
+
+	//zapisuje tablice buff na ostatnich 8 bitach destination
+	for (int i = 56; i != 68; i++) {
+		destination ^= (-buff[(i - 56)] ^ destination) & (1LL << i);
+	}
+	if (debug) std::cout << "rewitten destination: " << std::bitset<64>(destination) << "\n";
+
+	//przesuwa wszystkie bity source o 8 bit do przodu. Po wykonaniu ostatnie 8 bitow jest zduplikowane
+	for (int i = 0; i != 56; i++) { //56 bitow zostanie przesuniete
+		bool bit;
+		bit = (source >> i + 8) & 1LL;
+		source ^= (-bit ^ source) & (1LL << i);
+	}
+
+	//nadpisuje ostatnie 8 bitów source zerami
+	for (int i = 56; i != 64; i++) {
+		source &= ~(1LL << i);
+	}
+	if (debug) std::cout << "Moved source: " << std::bitset<64>(source) << "\n";
+}
+
+void reverseByByte(Int64& destination, Int64& source, bool debug) {
+	Int64 n = 0;
+	bool buff[8];
+	Int64 displayInt = false;
+
+	if (debug) std::cout << "Source: " << std::bitset<64>(source) << "\n" << "Destination: " << std::bitset<64>(destination) << "\n";
+
+	//zapisuje ostatnie 8 bitow source w tablicy buff
+	for (int i = 56; i != 64; i++) {
+		buff[i-56] = (source >> i) & 1LL;
+	}
+
+	//zapisuje w displayInt tablice buff
+	for (int i = 0; i != 8; i++) {
+		displayInt ^= (-buff[i] ^ displayInt) & (1LL << i);
+	}
+	if (debug) std::cout << "Moved byte: " << std::bitset<8>(displayInt) << "\n";
+
+	//przesuwa wszystkie bity destination o 8 bit do tylu. Po wykonaniu pierwsze 8 bitow jest zduplikowane
+	for (int i = 63; i != 7; i--) { //56 bitow zostanie przesuniete
+		bool bit;
+		bit = (source >> i - 8) & 1LL;
+		source ^= (-bit ^ source) & (1LL << i);
+	}
+
+	//zapisuje tablice buff na pierwszych 8 bitach destination
+	for (int i = 0; i != 8; i++) {
+		destination ^= (-buff[(i)] ^ destination) & (1LL << i);
+	}
+	if (debug) std::cout << "rewitten destination: " << std::bitset<64>(destination) << "\n";
+
+	//nadpisuje ostatnie 8 bitów source zerami
+	for (int i = 56; i != 64; i++) {
+		source &= ~(1LL << i);
+	}
+	if (debug) std::cout << "Moved source: " << std::bitset<64>(source) << "\n";
 }

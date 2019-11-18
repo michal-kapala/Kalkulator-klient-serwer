@@ -292,7 +292,9 @@ disconnect:
 			long long messg[3];
 			client.receive(messg, sizeof(messg), bytesrec);
 			if (sizeof(messg) == 16) {
+				Int64 redundant = false;
 				reverseByByte(messg[1], messg[0],debug);
+				moveByByte(redundant, messg[0], debug);
 			}
 			else if (sizeof(messg) == 24) {
 				Int64 redundant = false;
@@ -327,15 +329,15 @@ disconnect:
 }
 
 void moveByByte(Int64& destination, Int64& source, bool debug) {
-	Int64 n = 0;
+	if (debug) std::cout << "Operacja moveByByte:\n";
 	bool buff[8];
 	Int64 displayInt = false;
 
 	if (debug) std::cout << "Source: " << std::bitset<64>(source) << "\n" << "Destination: " << std::bitset<64>(destination) << "\n";
 
 	//zapisuje pierwsze 8 bitow source w tablicy buff
-	for (int i = 0; i != 8; i++) {
-		buff[i] = (source >> i) & 1LL;
+	for (int i = 56; i != 64; i++) {
+		buff[(i - 56)] = (source >> i) & 1LL;
 	}
 
 	//zapisuje w displayInt tablice buff
@@ -345,16 +347,35 @@ void moveByByte(Int64& destination, Int64& source, bool debug) {
 	if (debug) std::cout << "Moved byte: " << std::bitset<8>(displayInt) << "\n";
 
 	//zapisuje tablice buff na ostatnich 8 bitach destination
-	for (int i = 56; i != 68; i++) {
-		destination ^= (-buff[(i - 56)] ^ destination) & (1LL << i);
+	for (int i = 0; i != 8; i++) {
+		destination ^= (-buff[i] ^ destination) & (1LL << i);
 	}
 	if (debug) std::cout << "rewitten destination: " << std::bitset<64>(destination) << "\n";
 
 	//przesuwa wszystkie bity source o 8 bit do przodu. Po wykonaniu ostatnie 8 bitow jest zduplikowane
-	for (int i = 0; i != 56; i++) { //56 bitow zostanie przesuniete
-		bool bit;
-		bit = (source >> i + 8) & 1LL;
+	for (int i = 63; i != 7; i--) { //56 bitow zostanie przesuniete
+		bool bit;///Tato, Endian mnie bije!
+		bit = (source >> i - 8) & 1LL;
 		source ^= (-bit ^ source) & (1LL << i);
+	}
+
+	//nadpisuje ostatnie 8 bitów source zerami
+	for (int i = 0; i != 8; i++) {
+		source &= ~(1LL << i);
+	}
+	if (debug) std::cout << "Moved source: " << std::bitset<64>(source) << "\n";
+}
+
+void reverseByByte(Int64& destination, Int64& source, bool debug) {
+	if (debug) std::cout << "Operacja reverseByByte:\n";
+	bool buff[8];
+	Int64 displayInt = false;
+
+	if (debug) std::cout << "Source: " << std::bitset<64>(source) << "\n" << "Destination: " << std::bitset<64>(destination) << "\n";
+
+	//zapisuje ostatnie 8 bitow source w tablicy buff
+	for (int i = 0; i != 8; i++) {
+		buff[i] = (source >> i) & 1LL;
 	}
 
 	//nadpisuje ostatnie 8 bitów source zerami
@@ -362,19 +383,6 @@ void moveByByte(Int64& destination, Int64& source, bool debug) {
 		source &= ~(1LL << i);
 	}
 	if (debug) std::cout << "Moved source: " << std::bitset<64>(source) << "\n";
-}
-
-void reverseByByte(Int64& destination, Int64& source, bool debug) {
-	Int64 n = 0;
-	bool buff[8];
-	Int64 displayInt = false;
-
-	if (debug) std::cout << "Source: " << std::bitset<64>(source) << "\n" << "Destination: " << std::bitset<64>(destination) << "\n";
-
-	//zapisuje ostatnie 8 bitow source w tablicy buff
-	for (int i = 56; i != 64; i++) {
-		buff[i-56] = (source >> i) & 1LL;
-	}
 
 	//zapisuje w displayInt tablice buff
 	for (int i = 0; i != 8; i++) {
@@ -383,21 +391,16 @@ void reverseByByte(Int64& destination, Int64& source, bool debug) {
 	if (debug) std::cout << "Moved byte: " << std::bitset<8>(displayInt) << "\n";
 
 	//przesuwa wszystkie bity destination o 8 bit do tylu. Po wykonaniu pierwsze 8 bitow jest zduplikowane
-	for (int i = 63; i != 7; i--) { //56 bitow zostanie przesuniete
+	for (int i = 0; i != 56; i++) { //56 bitow zostanie przesuniete
 		bool bit;
-		bit = (source >> i - 8) & 1LL;
+		bit = (source >> i + 8) & 1LL;
 		source ^= (-bit ^ source) & (1LL << i);
 	}
 
 	//zapisuje tablice buff na pierwszych 8 bitach destination
-	for (int i = 0; i != 8; i++) {
-		destination ^= (-buff[(i)] ^ destination) & (1LL << i);
+	for (int i = 56; i != 64; i++) {
+		destination ^= (-buff[(i - 56)] ^ destination) & (1LL << i);
 	}
 	if (debug) std::cout << "rewitten destination: " << std::bitset<64>(destination) << "\n";
 
-	//nadpisuje ostatnie 8 bitów source zerami
-	for (int i = 56; i != 64; i++) {
-		source &= ~(1LL << i);
-	}
-	if (debug) std::cout << "Moved source: " << std::bitset<64>(source) << "\n";
 }

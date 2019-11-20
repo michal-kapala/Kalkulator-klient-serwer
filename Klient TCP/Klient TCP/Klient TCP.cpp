@@ -20,7 +20,7 @@ void reverseByByte(Int64& destination, Int64& source, bool debug = false);
 int main()
 {
 	//klient
-	bool debug = false; //ustawic jezeli chcemy widziec zmienne w bitach 
+	bool debug = true; //ustawic jezeli chcemy widziec zmienne w bitach 
 	unsigned int port;
 reconnect:
 	IpAddress ip = ip.getLocalAddress();

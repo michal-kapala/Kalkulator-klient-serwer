@@ -268,7 +268,7 @@ Uint64 setSessionID(Uint64 &handshake, std::vector<Uint64>&sessionvec)
 
 int main()
 {
-	bool debug = false;
+	bool debug = true;
 	std::vector<Uint64>sessions;
 	unsigned int port;
 	IpAddress ip = ip.getLocalAddress();
@@ -312,15 +312,17 @@ disconnect:
 			{
 				Int64 result[3];//odpowiedz - dane protokolu binarnego oraz wynik (w przypadku niecalkowitego przechowuje 3 cyfry po przecinku poprzez mnoznik dziesietny x1000 (1000 razy wieksza liczba)
 				size_t tosend = (messg[0] & DATA_LENGTH_MASK) >> 25;
+				header head;
+				dispatchMessage(messg[0], head);
 				///kod serwera jest 10 razy bardziej nieczytelny niz klienta
-				if (tosend == 16) {
+				if (head.datalength == 16) {
 					moveByByte(messg[0], messg[1],debug);
 				}
-				else if (tosend == 24) {
+				else if (head.datalength == 24) {
 					moveByByte(messg[0], messg[1],debug);
 					moveByByte(messg[1], messg[2],debug);
 				}
-				status = client.send(messg, tosend);//16B lub 24B
+				status = client.send(messg, head.datalength);//16B lub 24B
 			}
 		}
 	}

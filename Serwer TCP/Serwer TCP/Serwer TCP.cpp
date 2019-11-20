@@ -14,10 +14,11 @@ void reverseByByte(Int64& destination, Int64& source, bool debug = false);
 
 Uint64 createMessage(const header &header)//wczytuje dane z obiektu do wiadomosci
 {
+	Uint64 dataLength = (header.datalength * 8) - 39; //39 na nagłówek, 8bit = byte
 	unsigned long long message = 0;
 	message += (header.operationID << 61);
 	message += (header.statusID << 57);
-	message += (header.datalength << 25);
+	message += (dataLength << 25);
 	message += (header.secparam << 24);
 	message += (header.sessionID << 8);
 	return message;
@@ -30,6 +31,8 @@ void dispatchMessage(const Uint64 &msg, header &header)//wczytuje dane z wiadomo
 	header.datalength = (msg & DATA_LENGTH_MASK) >> 25;
 	header.secparam = (msg & PARAMETER_FLAG_MASK) >> 24;
 	header.sessionID = (msg & SESSIONID_MASK) >> 8;
+	header.datalength += 39; //39 na nagłówek, 8bit = byte
+	header.datalength /= 8;
 }
 
 void serverProcess(Int64 messg[])

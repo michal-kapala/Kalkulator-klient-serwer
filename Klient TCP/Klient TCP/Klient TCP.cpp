@@ -121,10 +121,11 @@ next:
 
 Uint64 createMessage(const header &header)//wczytuje dane z obiektu do naglowka wiadomosci
 {
+	Uint64 dataLength = (header.datalength * 8) - 39;
 	unsigned long long message = 0;
 	message += (header.operationID << 61);
 	message += (header.statusID << 57);
-	message += (header.datalength << 25);
+	message += (dataLength << 25);
 	message += (header.secparam << 24);
 	message += (header.sessionID << 8);
 	return message;
@@ -137,6 +138,8 @@ void dispatchMessage(const Uint64 &msg, header &header)//wczytuje dane z naglowk
 	header.datalength = (msg & DATA_LENGTH_MASK) >> 25;
 	header.secparam = (msg & PARAMETER_FLAG_MASK) >> 24;
 	header.sessionID = (msg & SESSIONID_MASK) >> 8;
+	header.datalength += 39;
+	header.datalength /= 8;
 }
 
 void sendPacket(TcpSocket &client, Uint64 sessionid , bool debug)

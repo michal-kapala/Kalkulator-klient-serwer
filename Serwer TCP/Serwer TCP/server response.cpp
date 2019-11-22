@@ -69,7 +69,7 @@ Int64 multiply(Int64 arg1, Int64 arg2) {
 }
 
 double divide(Int64 arg1, Int64 arg2) {
-	double ret = arg1 / arg2;
+	double ret = double(arg1) / arg2;
 	//std::cout << "Operacja dodawania: " << arg1 << " / " << arg2 << " = " << ret << "\n";
 	return ret;
 }

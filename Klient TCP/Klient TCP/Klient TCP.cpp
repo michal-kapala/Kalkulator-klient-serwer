@@ -121,7 +121,7 @@ next:
 
 Uint64 createMessage(const header &header)//wczytuje dane z obiektu do naglowka wiadomosci
 {
-	Uint64 dataLength = (header.datalength * 8) - 39;
+	Int64 dataLength = (header.datalength * 8) - 39;
 	unsigned long long message = 0;
 	message += (header.operationID << 61);
 	message += (header.statusID << 57);

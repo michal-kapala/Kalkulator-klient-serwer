@@ -4,8 +4,10 @@
 #include <iostream>
 #include <windows.h>
 #include <bitset>
+#include <stdexcept>
 #include <SFML/Network.hpp>
 using namespace sf;
+#define MAX_INPUT 999999999999999999
 const long long max = 9223372036854775807;//(2^64-1)/2 - maksymalna wartosc Int64
 
 void printHeader(header header);
@@ -16,25 +18,29 @@ bool errorCheck(const Socket::Status& status);
 void printHeader(header header);
 void moveByByte(Int64& destination,Int64& source, bool debug = false);
 void reverseByByte(Int64& destination, Int64& source, bool debug = false);
+header createHeader(const Int64& sessionID);
+Int64 readValue(bool negative = true);
 
 int main()
 {
 	//klient
 	bool debug = true; //ustawic jezeli chcemy widziec zmienne w bitach 
 	unsigned int port;
+	TcpSocket client;
+	std::string renew;
+	size_t bytesrec;
+	Uint64 handshake = 0;
+	Int64 result[3];
+	header header;
 reconnect:
 	IpAddress ip = ip.getLocalAddress();
 	std::cout << "Adres IPv4 klienta: " << ip;
 	std::cout << "\nAdres IPv4 serwera: ";
 	std::cin >> ip;
 	std::cout << "Port: ";
-	std::cin >> port;
-	TcpSocket client;
-	std::string renew;
+	std::cin >> port;	
 	std::cout << "Nawiazywanie polaczenia...\n";
 	Socket::Status status = client.connect(ip, port);
-	size_t bytesrec;
-	Uint64 handshake = 0;
 	client.send(&handshake, sizeof(handshake));
 	client.receive(&handshake, sizeof(handshake), bytesrec);
 next:
@@ -66,7 +72,6 @@ next:
 		else break;
 	case Socket::Status::Done:
 		sendPacket(client, handshake, debug);
-		Int64 result[3];
 		client.receive(result, sizeof(result), bytesrec);
 		if (sizeof(result) == 16) {
 			reverseByByte(result[1], result[0], debug);
@@ -75,32 +80,15 @@ next:
 			reverseByByte(result[2], result[1], debug);
 			reverseByByte(result[1], result[0], debug);
 		}
-		header header;
 		dispatchMessage(result[0], header);
 		std::cout << "\n\nOdebrano odpowiedz:\nWynik: ";
 		if (header.statusID == OK && header.secparam)
 			std::cout << result[1] << "." << result[2];
 		else std::cout << result[1];
-		std::cout << "\nID operacji: " << header.operationID;
-		if (!header.operationID && !header.secparam && (header.statusID == INVALIDARG || header.statusID == OVERFLOW || header.statusID == FACTORIALOK))//rozpoznanie operacji silni
-			std::cout << " (silnia)";
-		else if (!header.operationID) std::cout << " (dodawanie)";
-		std::cout << "\nStatus: ";
-		switch (header.statusID)
-		{
-		case OK: std::cout << "OK"; break;
-		case INVALIDARG: std::cout << "INVALIDARG"; break;
-		case INTONLY: std::cout << "INTONLY"; break;
-		case OVERFLOW: std::cout << "OVERFLOW"; break;
-		case UNDERFLOW: std::cout << "UNDERFLOW"; break;
-		case ZERODIV: std::cout << "ZERODIV"; break;
-		case FACTORIALOK: std::cout << "FACTORIAL OK"; break;
-		}
-		std::cout << "\nDlugosc danych: " << header.datalength << "\nArgumentow: " << header.secparam + 1 << "\nID sesji: " << header.sessionID << std::endl;
+		printHeader(header);
 		std::cout << "Kontynuowac? (t/n) ";
 		std::cin >> renew;
-		if (renew == "t")
-			goto next;
+		if (renew == "t") goto next;
 		else//zakoncz polaczenie
 		{
 			std::cout << "Zakonczono polaczenie.\n";
@@ -144,69 +132,27 @@ void dispatchMessage(const Uint64 &msg, header &header)//wczytuje dane z naglowk
 
 void sendPacket(TcpSocket &client, Uint64 sessionid , bool debug)
 {
-	
-	bool correct_num = 1;
-	while (correct_num) {
-		int nr;
-		std::cout << "\nPodaj numer operacji:\n"
-			<< "0 - dodawanie\n"
-			<< "1 - odejmowanie\n"
-			<< "2 - mnozenie\n"
-			<< "3 - dzielenie\n"
-			<< "4 - >=\n"
-			<< "5 - <=\n"
-			<< "6 - potega (podstawa, wykladnik)\n"
-			<< "7 - pierwiastek (liczba pierwiastkowana, stopien)\n"
-			<< "8 - silnia\n";
-		std::cout << "\nOperacja: ";
-		std::cin >> nr;
-		if (nr >= 0 && nr <= 8)
-		{
-			correct_num = 0;
-
-			header nag;
-			nag.operationID = nr;
-			nag.statusID = Null;//do ustawienia przez serwer
-			nag.sessionID = sessionid;//ustawione przez serwer
-			if (nag.operationID == 8)
-			{
-				nag.secparam = 0;
-				nag.datalength = 16;//16 bajtow
-				Int64 arg1;
-				std::cout << "Podaj argument: ";
-				std::cin >> arg1;
-				Int64 message = createMessage(nag);//3 bity - operacja, 4 bity - status, 32 bity dlugosc danych w bitach, 1 bit - flaga argumentow (0 - 1 arg., 1 - 2 arg.), 16 bitow - identyfikator sesji, 8 bitow dopelnienia
-				std::cout << "\nDane wysylanego pakietu\nWartosc wiadomosci wyslanej to: " << message << " (64-bit)" << std::endl;
-				dispatchMessage(message, nag);
-				moveByByte(message, arg1, debug);
-				Int64 pack[2] = { message, arg1 };
-				std::cout << "ID operacji: " << nag.operationID << "\nStatus: " << nag.statusID << "\nDlugosc danych: " << nag.datalength << "\nArgumentow: " << nag.secparam + 1 << "\nID sesji: " << nag.sessionID;
-				client.send(pack, sizeof(pack));
-			}
-			else
-			{
-				nag.secparam = 1;
-				nag.datalength = 24;//24 bajty
-				Int64 arg1, arg2;
-				std::cout << "\nPodaj 2 argumenty:\nArgument 1: ";
-				std::cin >> arg1;
-				std::cout << "Argument 2: ";
-				std::cin >> arg2;
-				Int64 message = createMessage(nag);//3 bity - operacja, 4 bity - status, 32 bity dlugosc danych w bitach, 1 bit - flaga argumentow (0 - 1 arg., 1 - 2 arg.), 16 bitow - identyfikator sesji, 8 bitow dopelnienia
-				std::cout << "\nDane wysylanego pakietu\nWartosc wiadomosci wyslanej to: " << message << " (64-bit)" << std::endl;
-				dispatchMessage(message, nag);
-				moveByByte(message, arg1, debug);
-				moveByByte(arg1, arg2, debug);
-				printHeader(nag);
-				Int64 pack[3] = { message, arg1, arg2 };
-				/*std::cout << "ID operacji: " << nag.operationID << "\nStatus: ";
-				std::cout << nag.statusID << "\nDlugosc danych: " << nag.datalength << "\nArgumentow: " << nag.secparam + 1 << "\nID sesji: " << nag.sessionID;*/
-				client.send(pack, sizeof(pack));
-			}
-		}
-		else {
-			std::cout << "Wpisz jeszcze raz: ";
-		}
+	Int64 arg1, arg2;
+	header nag = createHeader(sessionid);
+	if (nag.operationID == 8) {
+		arg1 = readValue();
+		Int64 message = createMessage(nag);//3 bity - operacja, 4 bity - status, 32 bity dlugosc danych w bitach, 1 bit - flaga argumentow (0 - 1 arg., 1 - 2 arg.), 16 bitow - identyfikator sesji, 8 bitow dopelnienia
+		std::cout << "\nDane wysylanego pakietu\nWartosc wiadomosci wyslanej to: " << std::hex << message << " (64-bit)" << std::endl;
+		moveByByte(message, arg1, debug);
+		Int64 pack[2] = { message, arg1 };
+		printHeader(nag);
+		client.send(pack, sizeof(pack));
+	}
+	else {
+		arg1 = readValue();
+		arg2 = readValue();
+		Int64 message = createMessage(nag);//3 bity - operacja, 4 bity - status, 32 bity dlugosc danych w bitach, 1 bit - flaga argumentow (0 - 1 arg., 1 - 2 arg.), 16 bitow - identyfikator sesji, 8 bitow dopelnienia
+		std::cout << "\nDane wysylanego pakietu\nWartosc wiadomosci wyslanej to: " << std::hex << message << " (64-bit)" << std::endl;
+		moveByByte(message, arg1, debug);
+		moveByByte(arg1, arg2, debug);
+		printHeader(nag);
+		Int64 pack[3] = { message, arg1, arg2 };
+		client.send(pack, sizeof(pack));
 	}
 }
 
@@ -260,7 +206,9 @@ void printHeader(header header) { //drukuje naglowek
 	case ZERODIV: std::cout << "ZERODIV"; break;
 	case FACTORIALOK: std::cout << "FACTORIAL OK"; break;
 	}
-	std::cout << "\nDlugosc danych: " << header.datalength << "\nArgumentow: " << header.secparam + 1 << "\nID sesji: " << header.sessionID << std::endl;
+	std::cout << "\nDlugosc danych: " << header.datalength
+		<< "\nArgumentow: " << header.secparam + 1
+		<< "\nID sesji: " << header.sessionID << std::endl;
 }
 
 void moveByByte(Int64 &destination,Int64 &source , bool debug) {
@@ -338,4 +286,63 @@ void reverseByByte(Int64& destination, Int64& source, bool debug) {
 	}
 	if (debug) std::cout << "rewitten destination: " << std::bitset<64>(destination) << "\n";
 
+}
+
+//Funkcja tworzy nagłówek na potrzeby klienta, zapewnia poprawnosc danych
+header createHeader(const Int64& sessionID) {
+	int nr = -1;
+	header toReturn;
+	do {
+		std::cout << "\nPodaj numer operacji:\n"
+			<< "0 - dodawanie\n"
+			<< "1 - odejmowanie\n"
+			<< "2 - mnozenie\n"
+			<< "3 - dzielenie\n"
+			<< "4 - >=\n"
+			<< "5 - <=\n"
+			<< "6 - potega (podstawa, wykladnik)\n"
+			<< "7 - pierwiastek (liczba pierwiastkowana, stopien)\n"
+			<< "8 - silnia\n";
+		std::cout << "\nOperacja: ";
+		std::cin >> nr;
+	} while (nr < 0 || nr > 8);
+	if (nr == 8) {
+		toReturn.secparam = 0;
+		toReturn.datalength = 16;
+	}
+	else {
+		toReturn.secparam = 1;
+		toReturn.datalength = 24;
+	}
+	toReturn.operationID = nr;
+	toReturn.sessionID = sessionID;
+	toReturn.statusID = Null;
+	return toReturn;
+}
+
+Int64 readValue(bool negative) {
+	Int64 value;
+	bool correct = false;
+	std::string e;
+	std::string input;
+	while (!correct){
+		std::cout << "Podaj argument: ";
+		std::cin >> input;
+		std::cout << std::endl;
+		try {
+			value = std::stoll(input);
+		}
+		catch (std::out_of_range) {
+			std::cout << "Blad. Wpisz jeszcze raz\n";
+			continue;
+		}
+		catch (std::invalid_argument) {
+			std::cout << "Blad. Wpisz jeszcze raz\n";
+			continue;
+		}
+		correct = true;
+
+
+	} 
+	return value;
 }

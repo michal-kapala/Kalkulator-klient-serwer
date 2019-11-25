@@ -1,17 +1,1 @@
-﻿  Serwer TCP.cpp
-c:\users\michal\desktop\kalkulator-klient-serwer\serwer tcp\serwer tcp\server response.hpp(8): warning C4005: "OVERFLOW": ponowna definicja makra
-  c:\program files (x86)\windows kits\10\include\10.0.17763.0\ucrt\corecrt_math.h(967): note: zobacz poprzednią definicję „OVERFLOW”
-c:\users\michal\desktop\kalkulator-klient-serwer\serwer tcp\serwer tcp\server response.hpp(9): warning C4005: "UNDERFLOW": ponowna definicja makra
-  c:\program files (x86)\windows kits\10\include\10.0.17763.0\ucrt\corecrt_math.h(968): note: zobacz poprzednią definicję „UNDERFLOW”
-c:\users\michal\desktop\kalkulator-klient-serwer\serwer tcp\serwer tcp\serwer tcp.cpp(325): warning C4244: "inicjowanie": konwersja z "__int64" do "size_t", możliwa utrata danych
-c:\users\michal\desktop\kalkulator-klient-serwer\serwer tcp\serwer tcp\serwer tcp.cpp(340): warning C4244: "argument": konwersja z "sf::Int64" do "size_t", możliwa utrata danych
-c:\users\michal\desktop\kalkulator-klient-serwer\serwer tcp\serwer tcp\serwer tcp.cpp(324): warning C4101: "result": lokalna zmienna, do której nie istnieje odwołanie
-c:\users\michal\desktop\kalkulator-klient-serwer\serwer tcp\serwer tcp\serwer tcp.cpp(361): warning C4804: "-": niebezpieczne użycie typu "bool" w operacji
-c:\users\michal\desktop\kalkulator-klient-serwer\serwer tcp\serwer tcp\serwer tcp.cpp(367): warning C4804: "-": niebezpieczne użycie typu "bool" w operacji
-c:\users\michal\desktop\kalkulator-klient-serwer\serwer tcp\serwer tcp\serwer tcp.cpp(374): warning C4554: „>>”: Sprawdź pierwszeństwo operatorów w poszukiwaniu możliwego błędu; użyj nawiasów, aby ujednoznacznić pierwszeństwo
-c:\users\michal\desktop\kalkulator-klient-serwer\serwer tcp\serwer tcp\serwer tcp.cpp(375): warning C4804: "-": niebezpieczne użycie typu "bool" w operacji
-c:\users\michal\desktop\kalkulator-klient-serwer\serwer tcp\serwer tcp\serwer tcp.cpp(405): warning C4804: "-": niebezpieczne użycie typu "bool" w operacji
-c:\users\michal\desktop\kalkulator-klient-serwer\serwer tcp\serwer tcp\serwer tcp.cpp(412): warning C4554: „>>”: Sprawdź pierwszeństwo operatorów w poszukiwaniu możliwego błędu; użyj nawiasów, aby ujednoznacznić pierwszeństwo
-c:\users\michal\desktop\kalkulator-klient-serwer\serwer tcp\serwer tcp\serwer tcp.cpp(413): warning C4804: "-": niebezpieczne użycie typu "bool" w operacji
-c:\users\michal\desktop\kalkulator-klient-serwer\serwer tcp\serwer tcp\serwer tcp.cpp(418): warning C4804: "-": niebezpieczne użycie typu "bool" w operacji
-  Serwer TCP.vcxproj -> C:\Users\Michal\Desktop\Kalkulator-klient-serwer\Serwer TCP\Debug\Serwer TCP.exe
+﻿  Serwer TCP.vcxproj -> C:\Users\jakub\Source\Repos\michal-kapala\Kalkulator-klient-serwer\Serwer TCP\Debug\Serwer TCP.exe

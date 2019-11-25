@@ -42,6 +42,7 @@ reconnect:
 	std::cin >> port;	
 	std::cout << "Nawiazywanie polaczenia...\n";
 	Socket::Status status = client.connect(ip, port);
+	handshake = byteLittleEndian(handshake);
 	client.send(&handshake, sizeof(handshake));
 	client.receive(&handshake, sizeof(handshake), bytesrec);
 	handshake = byteLittleEndian(handshake);
@@ -79,7 +80,6 @@ next:
 			for (int i = 0; i < 2; i++)
 				result[i] = byteLittleEndian(result[i]);
 			reverseByByte(result[1], result[0], debug);
-			
 		}
 		if (sizeof(result) == 24) {
 			for (int i = 0; i < 3; i++)
@@ -150,6 +150,8 @@ void sendPacket(TcpSocket &client, Uint64 sessionid , bool debug)
 		moveByByte(message, arg1, debug);
 		Int64 pack[2] = { message, arg1 };
 		printHeader(nag);
+		pack[0] = byteLittleEndian(pack[0]);
+		pack[1] = byteLittleEndian(pack[1]);
 		client.send(pack, sizeof(pack));
 	}
 	else {
@@ -161,6 +163,8 @@ void sendPacket(TcpSocket &client, Uint64 sessionid , bool debug)
 		moveByByte(arg1, arg2, debug);
 		printHeader(nag);
 		Int64 pack[3] = { message, arg1, arg2 };
+		for (int i = 0; i < 3; i++)
+			pack[i] = byteLittleEndian(pack[i]);
 		client.send(pack, sizeof(pack));
 	}
 }
@@ -355,7 +359,7 @@ Int64 readValue(bool negative) {
 	} 
 	return value;
 }
-}
+
 
 Int64 byteLittleEndian(const Int64 &number)
 {

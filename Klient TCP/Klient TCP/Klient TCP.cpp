@@ -20,6 +20,7 @@ void moveByByte(Int64& destination,Int64& source, bool debug = false);
 void reverseByByte(Int64& destination, Int64& source, bool debug = false);
 header createHeader(const Int64& sessionID);
 Int64 readValue(bool negative = true);
+Int64 byteLittleEndian(const Int64 &number);
 
 int main()
 {
@@ -43,6 +44,7 @@ reconnect:
 	Socket::Status status = client.connect(ip, port);
 	client.send(&handshake, sizeof(handshake));
 	client.receive(&handshake, sizeof(handshake), bytesrec);
+	handshake = byteLittleEndian(handshake);
 next:
 	switch (status)
 	{
@@ -74,9 +76,14 @@ next:
 		sendPacket(client, handshake, debug);
 		client.receive(result, sizeof(result), bytesrec);
 		if (sizeof(result) == 16) {
+			for (int i = 0; i < 2; i++)
+				result[i] = byteLittleEndian(result[i]);
 			reverseByByte(result[1], result[0], debug);
+			
 		}
 		if (sizeof(result) == 24) {
+			for (int i = 0; i < 3; i++)
+				result[i] = byteLittleEndian(result[i]);
 			reverseByByte(result[2], result[1], debug);
 			reverseByByte(result[1], result[0], debug);
 		}
@@ -98,6 +105,8 @@ next:
 			header.secparam = 0;
 			header.sessionID = 0;
 			Uint64 end = createMessage(header) + 1;//end=1
+			for (int i = 0; i < 2; i++)
+				result[i] = byteLittleEndian(result[i]);
 			client.send(&end, sizeof(end));
 			end = 0;
 			client.receive(&end, sizeof(end), bytesrec);
@@ -216,7 +225,7 @@ void moveByByte(Int64 &destination,Int64 &source , bool debug) {
 	bool buff[8];
 	Int64 displayInt = false;
 
-	if(debug) std::cout << "Source: " << std::bitset<64>(source) << "\n" << "Destination: " << std::bitset<64>(destination) << "\n";
+	if(debug) std::cout << "Source:               " << std::bitset<64>(source) << "\n" << "Destination:          " << std::bitset<64>(destination) << "\n";
 
 	//zapisuje pierwsze 8 bitow source w tablicy buff
 	for (int i = 56; i != 64; i++) {
@@ -227,7 +236,7 @@ void moveByByte(Int64 &destination,Int64 &source , bool debug) {
 	for (int i = 0; i != 8; i++) {
 		displayInt ^= (-buff[i] ^ displayInt) & (1LL << i);
 	}
-	if(debug) std::cout << "Moved byte: " << std::bitset<8>(displayInt) << "\n";
+	if(debug) std::cout << "Moved byte:             " << std::bitset<8>(displayInt) << "\n";
 
 	//zapisuje tablice buff na ostatnich 8 bitach destination
 	for (int i = 0; i != 8; i++) {
@@ -246,7 +255,7 @@ void moveByByte(Int64 &destination,Int64 &source , bool debug) {
 	for (int i = 0; i != 8;i++ ) {
 		source &= ~(1LL << i);
 	}
-	if (debug) std::cout << "Moved source: " << std::bitset<64>(source) << "\n";
+	if (debug) std::cout << "Moved source:         " << std::bitset<64>(source) << "\n";
 }
 
 void reverseByByte(Int64& destination, Int64& source, bool debug) {
@@ -254,7 +263,7 @@ void reverseByByte(Int64& destination, Int64& source, bool debug) {
 	bool buff[8];
 	Int64 displayInt = false;
 
-	if (debug) std::cout << "Source: " << std::bitset<64>(source) << "\n" << "Destination: " << std::bitset<64>(destination) << "\n";
+	if (debug) std::cout << "Source:               " << std::bitset<64>(source) << "\n" << "Destination:          " << std::bitset<64>(destination) << "\n";
 
 	//zapisuje ostatnie 8 bitow source w tablicy buff
 	for (int i = 0; i != 8; i++) {
@@ -265,13 +274,13 @@ void reverseByByte(Int64& destination, Int64& source, bool debug) {
 	for (int i = 0; i != 8; i++) {
 		source &= ~(1LL << i);
 	}
-	if (debug) std::cout << "Moved source: " << std::bitset<64>(source) << "\n";
+	if (debug) std::cout << "Moved source:         " << std::bitset<64>(source) << "\n";
 
 	//zapisuje w displayInt tablice buff
 	for (int i = 0; i != 8; i++) {
 		displayInt ^= (-buff[i] ^ displayInt) & (1LL << i);
 	}
-	if (debug) std::cout << "Moved byte: " << std::bitset<8>(displayInt) << "\n";
+	if (debug) std::cout << "Moved byte:           " << std::bitset<8>(displayInt) << "\n";
 
 	//przesuwa wszystkie bity destination o 8 bit do tylu. Po wykonaniu pierwsze 8 bitow jest zduplikowane
 	for (int i = 0; i != 56; i++) { //56 bitow zostanie przesuniete
@@ -345,4 +354,25 @@ Int64 readValue(bool negative) {
 
 	} 
 	return value;
+}
+}
+
+Int64 byteLittleEndian(const Int64 &number)
+{
+	Int64 result = 0;
+	int pivot = 56, pivot2 = 0;
+	const std::bitset<64>source = number;
+	std::bitset<64>processed = result;
+	for (int j = 0; j < 4; j++)//4 zamiany bajtow
+	{
+		for (int i = 0; i < 8; i++)//kopiuj bajt zamieniajac na big endian
+		{
+			processed[pivot2 + i] = source[pivot + i];
+			processed[pivot + i] = source[pivot2 + i];
+		}
+		pivot -= 8;
+		pivot2 += 8;
+	}
+	result = processed.to_ullong();//bitset -> ULL
+	return result;
 }

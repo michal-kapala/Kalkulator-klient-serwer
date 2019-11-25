@@ -11,6 +11,7 @@ const long long max = 9223372036854775807;
 const long long min = max * -1 - 1;
 void moveByByte(Int64& destination, Int64& source, bool debug = false);
 void reverseByByte(Int64& destination, Int64& source, bool debug = false);
+Int64 byteLittleEndian(const Int64& number);
 
 Uint64 createMessage(const header &header)//wczytuje dane z obiektu do wiadomosci
 {
@@ -37,14 +38,13 @@ void dispatchMessage(const Uint64 &msg, header &header)//wczytuje dane z wiadomo
 
 void serverProcess(Int64 messg[])
 {
-
 	header header;
 	dispatchMessage(messg[0], header);
 	if (messg[0]==1) goto skip;
 	std::cout << "\nOdebrano zapytanie\nStatus: " << header.statusID << "\nDlugosc danych: " << header.datalength << "\nArgumentow: " << header.secparam + 1 << "\nID sesji: " << header.sessionID << std::endl;
 	if (!header.secparam)
 	{
-		Int64 arg1 = messg[1];
+		Int64 arg1 = messg[1];//zamiana na little endian
 		std::cout << "Otrzymano wiadomosc: " << messg[0] << " oraz argument " << arg1 << std::endl;
 		std::cout << "ID operacji: " << header.operationID << " (silnia)\n";
 		if (arg1 < 0)
@@ -60,7 +60,7 @@ void serverProcess(Int64 messg[])
 	}
 	else
 	{
-		Int64 arg1 = messg[1], arg2 = messg[2];
+		Int64 arg1 = messg[1], arg2 = messg[2];//zamaina na little endian
 		std::cout << "Otrzymano wiadomosc: " << messg[0] << " oraz argumenty: " << arg1 << " i " << arg2 << std::endl;
 		std::cout << "ID operacji: " << header.operationID << " - ";
 		switch (header.operationID)
@@ -108,7 +108,7 @@ void serverProcess(Int64 messg[])
 			}
 			break;
 		case MNOZENIE:
-			std::cout << "mnozenie\n;";
+			std::cout << "mnozenie\n";
 			if (arg1 > 0 && arg2 > 0 && multiply(arg1, arg2) < 0)//2 argumenty zwrotne
 			{
 				header.statusID = OVERFLOW;
@@ -268,7 +268,13 @@ Uint64 setSessionID(Uint64 &handshake, std::vector<Uint64>&sessionvec)
 
 int main()
 {
-	bool debug = true;
+	Int64 test = 1679619;//2^8 + 2^1 + 2^0
+	std::bitset<64>bits = test;
+	std::cout << bits << std::endl;
+	test = byteLittleEndian(test);
+	bits = test;
+	std::cout << bits << std::endl;
+	bool debug = false;
 	std::vector<Uint64>sessions;
 	unsigned int port;
 	IpAddress ip = ip.getLocalAddress();
@@ -286,7 +292,8 @@ disconnect:
 	Uint64 handshake;
 	size_t bytesrec;
 	client.receive(&handshake, sizeof(handshake), bytesrec);
-	handshake = setSessionID(handshake, sessions);
+	handshake = byteLittleEndian(handshake);
+	handshake = byteLittleEndian(setSessionID(handshake, sessions));
 	status=client.send(&handshake, sizeof(handshake));
 	while (true)
 	{
@@ -295,9 +302,13 @@ disconnect:
 			long long messg[3];
 			client.receive(messg, sizeof(messg), bytesrec);
 			if (sizeof(messg) == 16) {
+				messg[0] = byteLittleEndian(messg[0]);//zamiana na little endian do odczytu
+				messg[1] = byteLittleEndian(messg[1]);//zamiana na little endian do odczytu
 				reverseByByte(messg[1], messg[0],debug);
 			}
 			else if (sizeof(messg) == 24) {
+				for (int i = 0; i < 3; i++)
+					messg[i] = byteLittleEndian(messg[i]);//zamiana na little endian do odczytu
 				reverseByByte(messg[2], messg[1],debug);
 				reverseByByte(messg[1], messg[0],debug);
 			}
@@ -317,10 +328,14 @@ disconnect:
 				///kod serwera jest 10 razy bardziej nieczytelny niz klienta
 				if (head.datalength == 16) {
 					moveByByte(messg[0], messg[1],debug);
+					for (int i = 0; i < 2; i++)
+						messg[i] = byteLittleEndian(messg[i]);
 				}
 				else if (head.datalength == 24) {
 					moveByByte(messg[0], messg[1],debug);
 					moveByByte(messg[1], messg[2],debug);
+					for (int i = 0; i < 3; i++)
+						messg[i] = byteLittleEndian(messg[i]);
 				}
 				status = client.send(messg, head.datalength);//16B lub 24B
 			}
@@ -404,4 +419,24 @@ void reverseByByte(Int64& destination, Int64& source, bool debug) {
 	}
 	if (debug) std::cout << "rewitten destination: " << std::bitset<64>(destination) << "\n";
 
+}
+
+Int64 byteLittleEndian(const Int64 &number)
+{
+	Int64 result=0;
+	int pivot=56, pivot2=0;
+	const std::bitset<64>source = number;
+	std::bitset<64>processed = result;
+	for (int j = 0; j < 4; j++)//4 zamiany bajtow
+	{
+		for (int i = 0; i < 8; i++)//kopiuj bajt zamieniajac na big endian
+		{
+			processed[pivot2 + i] = source[pivot + i];
+			processed[pivot + i] = source[pivot2 + i];
+		}
+		pivot -= 8;
+		pivot2 += 8;
+	}
+	result = processed.to_ullong();//bitset -> ULL
+	return result;
 }

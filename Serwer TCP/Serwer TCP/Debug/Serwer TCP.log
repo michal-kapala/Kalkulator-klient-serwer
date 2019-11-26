@@ -1,1 +1,18 @@
-﻿  Serwer TCP.vcxproj -> C:\Users\jakub\Source\Repos\michal-kapala\Kalkulator-klient-serwer\Serwer TCP\Debug\Serwer TCP.exe
+﻿  Serwer TCP.cpp
+C:\Users\jakub\source\repos\michal-kapala\Kalkulator-klient-serwer\Serwer TCP\Serwer TCP\server response.hpp(8,1): warning C4005: 'OVERFLOW': macro redefinition
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\ucrt\corecrt_math.h(967): message : see previous definition of 'OVERFLOW'
+C:\Users\jakub\source\repos\michal-kapala\Kalkulator-klient-serwer\Serwer TCP\Serwer TCP\server response.hpp(9,1): warning C4005: 'UNDERFLOW': macro redefinition
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\ucrt\corecrt_math.h(968): message : see previous definition of 'UNDERFLOW'
+C:\Users\jakub\source\repos\michal-kapala\Kalkulator-klient-serwer\Serwer TCP\Serwer TCP\Serwer TCP.cpp(326,24): warning C4805: '==': unsafe mix of type '__int64' and type 'bool' in operation
+C:\Users\jakub\source\repos\michal-kapala\Kalkulator-klient-serwer\Serwer TCP\Serwer TCP\Serwer TCP.cpp(345,18): warning C4244: 'initializing': conversion from '__int64' to 'size_t', possible loss of data
+C:\Users\jakub\source\repos\michal-kapala\Kalkulator-klient-serwer\Serwer TCP\Serwer TCP\Serwer TCP.cpp(360,36): warning C4244: 'argument': conversion from 'sf::Int64' to 'size_t', possible loss of data
+C:\Users\jakub\source\repos\michal-kapala\Kalkulator-klient-serwer\Serwer TCP\Serwer TCP\Serwer TCP.cpp(344,10): warning C4101: 'result': unreferenced local variable
+C:\Users\jakub\source\repos\michal-kapala\Kalkulator-klient-serwer\Serwer TCP\Serwer TCP\Serwer TCP.cpp(380,27): warning C4804: '-': unsafe use of type 'bool' in operation
+C:\Users\jakub\source\repos\michal-kapala\Kalkulator-klient-serwer\Serwer TCP\Serwer TCP\Serwer TCP.cpp(386,28): warning C4804: '-': unsafe use of type 'bool' in operation
+C:\Users\jakub\source\repos\michal-kapala\Kalkulator-klient-serwer\Serwer TCP\Serwer TCP\Serwer TCP.cpp(393,25): warning C4554: '>>': check operator precedence for possible error; use parentheses to clarify precedence
+C:\Users\jakub\source\repos\michal-kapala\Kalkulator-klient-serwer\Serwer TCP\Serwer TCP\Serwer TCP.cpp(394,19): warning C4804: '-': unsafe use of type 'bool' in operation
+C:\Users\jakub\source\repos\michal-kapala\Kalkulator-klient-serwer\Serwer TCP\Serwer TCP\Serwer TCP.cpp(424,27): warning C4804: '-': unsafe use of type 'bool' in operation
+C:\Users\jakub\source\repos\michal-kapala\Kalkulator-klient-serwer\Serwer TCP\Serwer TCP\Serwer TCP.cpp(431,30): warning C4554: '>>': check operator precedence for possible error; use parentheses to clarify precedence
+C:\Users\jakub\source\repos\michal-kapala\Kalkulator-klient-serwer\Serwer TCP\Serwer TCP\Serwer TCP.cpp(432,24): warning C4804: '-': unsafe use of type 'bool' in operation
+C:\Users\jakub\source\repos\michal-kapala\Kalkulator-klient-serwer\Serwer TCP\Serwer TCP\Serwer TCP.cpp(437,35): warning C4804: '-': unsafe use of type 'bool' in operation
+  Serwer TCP.vcxproj -> C:\Users\jakub\Source\Repos\michal-kapala\Kalkulator-klient-serwer\Serwer TCP\Debug\Serwer TCP.exe

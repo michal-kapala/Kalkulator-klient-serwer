@@ -25,7 +25,7 @@ Int64 byteLittleEndian(const Int64 &number);
 int main()
 {
 	//klient
-	bool debug = true; //ustawic jezeli chcemy widziec zmienne w bitach 
+	bool debug = false;  //flaga debugowania
 	unsigned int port;
 	TcpSocket client;
 	std::string renew;
@@ -33,11 +33,18 @@ int main()
 	Uint64 handshake = 0;
 	Int64 result[3];
 	header header;
+	std::string debugString;
+	IpAddress ip;
 reconnect:
-	IpAddress ip = ip.getLocalAddress();
+	ip = ip.getLocalAddress();
 	std::cout << "Adres IPv4 klienta: " << ip;
 	std::cout << "\nAdres IPv4 serwera: ";
 	std::cin >> ip;
+	if (ip == "999.999.999.999") { // W adresie wpisac 999.999.999.999 aby ustawic debug
+		debug = true;
+		std::cout << "Tryb debug!\n";
+		goto reconnect;
+	}
 	std::cout << "Port: ";
 	std::cin >> port;	
 	std::cout << "Nawiazywanie polaczenia...\n";
@@ -90,8 +97,8 @@ next:
 		dispatchMessage(result[0], header);
 		std::cout << "\n\nOdebrano odpowiedz:\nWynik: ";
 		if (header.statusID == OK && header.secparam)
-			std::cout << result[1] << "." << result[2];
-		else std::cout << result[1];
+			std::cout << std::dec << result[1] << "." << result[2];
+		else std::cout << std::dec << result[1];
 		printHeader(header);
 		std::cout << "Kontynuowac? (t/n) ";
 		std::cin >> renew;
@@ -104,9 +111,9 @@ next:
 			header.operationID = 0;
 			header.secparam = 0;
 			header.sessionID = 0;
-			Uint64 end = createMessage(header) + 1;//end=1
-			for (int i = 0; i < 2; i++)
-				result[i] = byteLittleEndian(result[i]);
+			//Uint64 end = createMessage(header) + 1;//end=1
+			//for (int i = 0; i < 2; i++) result[i] = byteLittleEndian(result[i]);
+			Uint64 end = true;
 			client.send(&end, sizeof(end));
 			end = 0;
 			client.receive(&end, sizeof(end), bytesrec);
@@ -305,7 +312,9 @@ void reverseByByte(Int64& destination, Int64& source, bool debug) {
 header createHeader(const Int64& sessionID) {
 	int nr = -1;
 	header toReturn;
+	std::string input;
 	do {
+		input.clear();
 		std::cout << "\nPodaj numer operacji:\n"
 			<< "0 - dodawanie\n"
 			<< "1 - odejmowanie\n"
@@ -317,7 +326,18 @@ header createHeader(const Int64& sessionID) {
 			<< "7 - pierwiastek (liczba pierwiastkowana, stopien)\n"
 			<< "8 - silnia\n";
 		std::cout << "\nOperacja: ";
-		std::cin >> nr;
+		std::cin >> input;
+		try {
+			nr = std::stoi(input);
+		}
+		catch (std::out_of_range) {
+			std::cout << "Blad. Wpisz jeszcze raz\n";
+			continue;
+		}
+		catch (std::invalid_argument) {
+			std::cout << "Blad. Wpisz jeszcze raz\n";
+			continue;
+		}
 	} while (nr < 0 || nr > 8);
 	if (nr == 8) {
 		toReturn.secparam = 0;

@@ -268,29 +268,51 @@ Uint64 setSessionID(Uint64 &handshake, std::vector<Uint64>&sessionvec)
 
 int main()
 {
-	Int64 test = 1679619;//2^8 + 2^1 + 2^0
-	std::bitset<64>bits = test;
-	std::cout << bits << std::endl;
-	test = byteLittleEndian(test);
-	bits = test;
-	std::cout << bits << std::endl;
+	//Int64 test = 1679619;//2^8 + 2^1 + 2^0
+	//std::bitset<64>bits = test;
+	//std::cout << bits << std::endl;
+	//test = byteLittleEndian(test);
+	//bits = test;
+	//std::cout << bits << std::endl;
 	bool debug = false;
 	std::vector<Uint64>sessions;
+	std::string portString;
 	unsigned int port;
-	IpAddress ip = ip.getLocalAddress();
-	std::cout << "Adres lokalny IPv4: " << ip << std::endl;
-	std::cout << "Port: ";
-	std::cin >> port;
+	Uint64 handshake;
+	size_t bytesrec;
+	TcpSocket client;
 	TcpListener listener;
+	IpAddress ip = ip.getLocalAddress();
+
+	std::cout << "Adres lokalny IPv4: " << ip << std::endl;
+	while (true) {
+		std::cout << "Port: ";
+		std::cin >> portString;
+		if (portString == "debug") {
+			debug = true;
+			std::cout << "Tryb debug!\n";
+			continue;
+		}
+		try {
+			port = std::stoi(portString);
+		}
+		catch (std::out_of_range) {
+			std::cout << "Blad. Wpisz jeszcze raz\n";
+			continue;
+		}
+		catch (std::invalid_argument) {
+			std::cout << "Blad. Wpisz jeszcze raz\n";
+			continue;
+		}
+		break;
+	}
 	Socket::Status status;
 	status = listener.listen(port);
 	if (status == Socket::Status::Done) std::cout << "Serwer nasluchuje polaczenia...\n";
-	TcpSocket client;
 disconnect:
 	status = listener.accept(client);
 	std::cout << "\nPolaczono z klientem\n";
-	Uint64 handshake;
-	size_t bytesrec;
+	
 	client.receive(&handshake, sizeof(handshake), bytesrec);
 	handshake = byteLittleEndian(handshake);
 	handshake = byteLittleEndian(setSessionID(handshake, sessions));
@@ -301,6 +323,12 @@ disconnect:
 		{
 			long long messg[3];
 			client.receive(messg, sizeof(messg), bytesrec);
+			if (messg[0] == true)
+			{
+				std::cout << "Klient zakonczyl polaczenie.\n";
+				client.disconnect();
+				goto disconnect;
+			}
 			if (sizeof(messg) == 16) {
 				messg[0] = byteLittleEndian(messg[0]);//zamiana na little endian do odczytu
 				messg[1] = byteLittleEndian(messg[1]);//zamiana na little endian do odczytu
@@ -311,34 +339,25 @@ disconnect:
 					messg[i] = byteLittleEndian(messg[i]);//zamiana na little endian do odczytu
 				reverseByByte(messg[2], messg[1],debug);
 				reverseByByte(messg[1], messg[0],debug);
-			}
-			serverProcess(messg);
-			if (messg[0] == 1)
-			{
-				std::cout << "Klient zakonczyl polaczenie.\n";
-				client.disconnect();
-				goto disconnect;
 			}	
-			else
-			{
-				Int64 result[3];//odpowiedz - dane protokolu binarnego oraz wynik (w przypadku niecalkowitego przechowuje 3 cyfry po przecinku poprzez mnoznik dziesietny x1000 (1000 razy wieksza liczba)
-				size_t tosend = (messg[0] & DATA_LENGTH_MASK) >> 25;
-				header head;
-				dispatchMessage(messg[0], head);
-				///kod serwera jest 10 razy bardziej nieczytelny niz klienta
-				if (head.datalength == 16) {
-					moveByByte(messg[0], messg[1],debug);
-					for (int i = 0; i < 2; i++)
-						messg[i] = byteLittleEndian(messg[i]);
-				}
-				else if (head.datalength == 24) {
-					moveByByte(messg[0], messg[1],debug);
-					moveByByte(messg[1], messg[2],debug);
-					for (int i = 0; i < 3; i++)
-						messg[i] = byteLittleEndian(messg[i]);
-				}
-				status = client.send(messg, head.datalength);//16B lub 24B
+			serverProcess(messg);
+			Int64 result[3];//odpowiedz - dane protokolu binarnego oraz wynik (w przypadku niecalkowitego przechowuje 3 cyfry po przecinku poprzez mnoznik dziesietny x1000 (1000 razy wieksza liczba)
+			size_t tosend = (messg[0] & DATA_LENGTH_MASK) >> 25;
+			header head;
+			dispatchMessage(messg[0], head);
+			///kod serwera jest 10 razy bardziej nieczytelny niz klienta
+			if (head.datalength == 16) {
+				moveByByte(messg[0], messg[1],debug);
+				for (int i = 0; i < 2; i++)
+					messg[i] = byteLittleEndian(messg[i]);
 			}
+			else if (head.datalength == 24) {
+				moveByByte(messg[0], messg[1],debug);
+				moveByByte(messg[1], messg[2],debug);
+				for (int i = 0; i < 3; i++)
+					messg[i] = byteLittleEndian(messg[i]);
+			}
+			status = client.send(messg, head.datalength);//16B lub 24B
 		}
 	}
 	return 0;
